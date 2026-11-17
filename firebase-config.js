@@ -7,3 +7,6 @@ export const firebaseConfig = {
   messagingSenderId: "874724539520",
   appId: "1:874724539520:web:4b952580d4f7a5b7083a65"
 };
+
+// Web push (FCM) public VAPID key. Gizli değildir.
+export const vapidKey = "BBeVIWEqYlyZYrRangDXJ8GzlP7M0yq9ZdEAaE9Zrfnnx72HZYQvVWU1ANRYnkiyissod2ntrbD0_TPxTLwtrDY";

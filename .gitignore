@@ -2,5 +2,10 @@
 *-export.json
 index-claude-artifact.html
 node_modules/
+# Firebase service account anahtarı ASLA repoya girmez
+*firebase-adminsdk*.json
+*service-account*.json
+*serviceAccount*.json
+sylwa-5dc72-*.json
 .DS_Store
 Thumbs.db

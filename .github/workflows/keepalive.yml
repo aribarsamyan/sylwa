@@ -1,0 +1,23 @@
+name: keepalive
+
+# GitHub turns off scheduled workflows after 60 days without repository activity.
+# One empty commit a month keeps "notify" running. It changes no files.
+on:
+  schedule:
+    - cron: "17 9 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v5
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "keepalive: keep scheduled notifications running"
+          git push

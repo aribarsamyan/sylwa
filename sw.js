@@ -3,9 +3,10 @@
    - Other own files (icons, manifest, config): same network-first rule.
    - Firebase SDK files (fixed version on gstatic): cached so the app opens offline.
    - Firestore / Auth / Google Fonts requests: never touched.
-   Bump VERSION when the shell list changes. Push notifications (part 2) get their own section below. */
+   - Push notifications: see the section at the bottom.
+   Bump VERSION whenever this file or the shell list changes. */
 
-const VERSION = "sylwa-v1";
+const VERSION = "sylwa-v2";
 const SHELL = [
   "./",
   "./index.html",
@@ -16,7 +17,7 @@ const SHELL = [
   "./icons/icon-512.png"
 ];
 const SDK_PREFIX = "https://www.gstatic.com/firebasejs/10.12.2/";
-const SDK = ["firebase-app.js", "firebase-auth.js", "firebase-firestore.js"].map(f => SDK_PREFIX + f);
+const SDK = ["firebase-app.js", "firebase-auth.js", "firebase-firestore.js", "firebase-messaging.js"].map(f => SDK_PREFIX + f);
 
 /* ---------- lifecycle ---------- */
 self.addEventListener("install", event => {
@@ -74,6 +75,32 @@ async function cacheFirst(req) {
   return res;
 }
 
-/* ---------- push notifications (part 2) ---------- */
-// self.addEventListener("push", ...);
-// self.addEventListener("notificationclick", ...);
+/* ---------- push notifications ----------
+   Sent by notifier/ (GitHub Actions) through FCM as data-only messages:
+   data = { title, body, tag, url }. Every push shows a notification (iOS requires it). */
+self.addEventListener("push", event => {
+  let payload = {};
+  try { payload = event.data ? event.data.json() : {}; }
+  catch (e) { payload = { data: { body: event.data ? event.data.text() : "" } }; }
+  const d = payload.data || {}, n = payload.notification || {};
+  const title = d.title || n.title || "SYLWA";
+  const options = {
+    body: d.body || n.body || "",
+    icon: "icons/icon-192.png",
+    badge: "icons/icon-192.png",
+    data: { url: d.url || self.registration.scope }
+  };
+  if (d.tag) { options.tag = d.tag; options.renotify = true; }
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", event => {
+  event.notification.close();
+  const scope = self.registration.scope;
+  event.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const open = wins.find(w => w.url.startsWith(scope));
+    if (open) return open.focus();
+    return self.clients.openWindow(scope);
+  })());
+});

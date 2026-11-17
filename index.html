@@ -15,6 +15,7 @@
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js">
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js">
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=VT323&family=Archivo:wght@500;700;800&display=swap" rel="stylesheet">
@@ -227,6 +228,16 @@ body.locked>.wrap,body.locked>.dock{display:none}
 .lcdbtn:active{transform:translateY(4px);box-shadow:0 2px 0 #120B24}
 .lcdbtn[hidden]{display:none}
 .gnote{font-size:12.5px;line-height:1.35;color:#43346E;font-weight:500;text-align:center;margin:0}
+/* notifications panel */
+.npanel{display:flex;gap:10px;align-items:center}
+.nlcd{flex:1;min-width:0;background:var(--bezel);color:var(--lcd);font-family:var(--f-lcd);font-size:20px;padding:8px 10px;border-radius:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.npanel .hw{flex-shrink:0}
+.chks{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chk{display:flex;align-items:center;gap:8px;font-family:var(--f-label);font-size:9.5px;color:var(--ink);background:#fff;border:3px solid var(--ink);border-radius:10px;padding:10px;box-shadow:3px 3px 0 var(--ink);cursor:pointer}
+.chk input{width:20px;height:20px;margin:0;accent-color:var(--c-muzik);flex-shrink:0}
+.nnote{font-size:12.5px;line-height:1.4;color:#43346E;font-weight:600;margin:0}
+.btn.wide{width:100%}
+.btn[disabled]{opacity:.5;cursor:not-allowed;transform:none;box-shadow:3px 3px 0 var(--ink)}
 @media (max-width:380px){.ch{grid-template-columns:54px 1fr 56px}.pad,.ch .edit{width:56px;height:56px}.lcd{font-size:19px}.lcd .big{font-size:34px}.brand h1{font-size:14px}}
 </style>
 </head>
@@ -279,6 +290,8 @@ body.locked>.wrap,body.locked>.dock{display:none}
       <button class="hw sm" id="editBtn" type="button"><span class="dot"></span><span id="editTxt">REC · DÜZENLE</span></button>
       <button class="hw sm go" id="addBtn" type="button">＋ KANAL EKLE</button>
     </div>
+    <div class="lbl">BİLDİRİMLER</div>
+    <div class="npanel"><span class="nlcd" id="nStat">● KAPALI</span><button class="hw sm go" id="nOpen" type="button">AYARLAR ›</button></div>
   </section>
   <section class="scr" id="scrKasa" hidden>
     <div class="lbl">BEAT KASASI</div>
@@ -352,6 +365,31 @@ body.locked>.wrap,body.locked>.dock{display:none}
       <button class="btn danger" id="sDel" type="button">SİL</button>
       <span style="flex:1"></span>
       <button class="btn" id="sCancel" type="button">VAZGEÇ</button>
+      <button class="btn primary" type="submit">KAYDET</button>
+    </div>
+  </form>
+</div>
+<div class="scrim" id="notifScrim">
+  <form class="sheet" id="notifForm">
+    <h3>BİLDİRİMLER</h3>
+    <p class="nnote" id="nHint">Bu cihazda bildirimler kapalı.</p>
+    <button class="btn primary wide" id="nEnable" type="button">BİLDİRİMLERİ AÇ</button>
+    <div class="chks">
+      <label class="chk"><input type="checkbox" id="nWater">SU</label>
+      <label class="chk"><input type="checkbox" id="nSupp">TAKVİYE</label>
+      <label class="chk"><input type="checkbox" id="nBlocks">BLOK BAŞLANGICI</label>
+      <label class="chk"><input type="checkbox" id="nSummary">AKŞAM ÖZETİ</label>
+    </div>
+    <label class="field" for="nSumT">AKŞAM ÖZETİ SAATİ<input id="nSumT" type="time" required></label>
+    <div class="row2">
+      <label class="field" for="nQs">SESSİZ · BAŞLANGIÇ<input id="nQs" type="time" required></label>
+      <label class="field" for="nQe">SESSİZ · BİTİŞ<input id="nQe" type="time" required></label>
+    </div>
+    <button class="btn wide" id="nTest" type="button">TEST BİLDİRİMİ</button>
+    <p class="nnote">iPhone'da bildirimler sadece ana ekrana eklenmiş SYLWA'da ve iOS 16.4 ya da üstünde çalışır. Saatler New York saatine göre. Bildirimler birkaç dakika, yoğun saatlerde 10–20 dakika gecikebilir; test bildirimi 15 dakikaya kadar sürebilir.</p>
+    <div class="acts">
+      <span style="flex:1"></span>
+      <button class="btn" id="nCancel" type="button">VAZGEÇ</button>
       <button class="btn primary" type="submit">KAYDET</button>
     </div>
   </form>
@@ -702,7 +740,7 @@ setInterval(()=>{if(S.loaded&&S.sel===todayIdx&&!S.edit)renderList()},60000);
 /* ---------- data ---------- */
 render();
 /* Firebase adapter (module script below) calls this after login with a db that mimics the old claude db API. */
-window.ARI_START=function(adapter){
+window.SYLWA_START=function(adapter){
   if(db)return;
   db=adapter;
   let timer=setTimeout(()=>{if(!S.loaded)banner("Veriler henüz yüklenemedi, bağlantını kontrol et.")},10000);
@@ -723,7 +761,9 @@ window.ARI_START=function(adapter){
 };
 </script>
 <script type="module">
-import {firebaseConfig} from "./firebase-config.js";
+import * as CFG from "./firebase-config.js";
+import {getMessaging,getToken,isSupported as messagingSupported} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+const firebaseConfig=CFG.firebaseConfig;
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {initializeAuth,browserLocalPersistence,onAuthStateChanged,signInWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,doc,collection,query,where,setDoc,deleteDoc,getDoc,onSnapshot,writeBatch} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -774,7 +814,88 @@ async function importJSON(uid,j){
 
 function openApp(uid){
   $("gate").hidden=true;document.body.classList.remove("locked");
-  window.ARI_START(makeDb(uid));
+  window.SYLWA_START(makeDb(uid));
+  setupNotify(uid);
+}
+
+/* ---- notifications: FCM token on the existing sw.js, settings in users/{uid}/settings/notify ---- */
+const N_DEF={water:true,supplement:true,blocks:true,summary:true,summaryTime:"20:12",quietStart:"23:30",quietEnd:"08:00"};
+const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+const standalone=navigator.standalone===true||matchMedia("(display-mode: standalone)").matches;
+const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const lsSet=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}};
+const withTimeout=(p,ms)=>Promise.race([p,new Promise(r=>setTimeout(r,ms))]);
+async function sha(s){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("").slice(0,40)}
+
+function setupNotify(uid){
+  const base="users/"+uid+"/";
+  let supported=false;
+  const perm=()=>("Notification" in window)?Notification.permission:"unsupported";
+  const isOn=()=>supported&&perm()==="granted"&&!!lsGet("sylwa-push");
+
+  function paint(){
+    let stat,hint,btn="BİLDİRİMLERİ AÇ",dis=false;
+    if(isIOS&&!standalone){stat="● ÖNCE ANA EKRANA EKLE";hint="Safari'den açtın. Paylaş → Ana Ekrana Ekle ile ekle, sonra SYLWA ikonundan açıp buradan bildirimleri aç.";btn="ÖNCE ANA EKRANA EKLE";dis=true}
+    else if(!supported){stat="● DESTEKLENMİYOR";hint="Bu tarayıcı bildirimleri desteklemiyor. iPhone'da iOS 16.4 ya da üstü gerekir.";dis=true}
+    else if(perm()==="denied"){stat="● İZİN KAPALI";hint="Bildirim izni kapalı. iPhone: Ayarlar → Bildirimler → SYLWA → Bildirimlere İzin Ver.";dis=true}
+    else if(isOn()){stat="● AÇIK · BU CİHAZ";hint="Bu cihaz bildirim alıyor. Hangi bildirimlerin geleceğini aşağıdan seç.";btn="AÇIK ✓ · YENİLE"}
+    else{stat="● KAPALI";hint="Bu cihazda bildirimler kapalı. Açmak için aşağıdaki butona dokun."}
+    $("nStat").textContent=stat;$("nHint").textContent=hint;$("nEnable").textContent=btn;$("nEnable").disabled=dis;
+  }
+
+  async function saveToken(){
+    const reg=await navigator.serviceWorker.ready;
+    const token=await getToken(getMessaging(app),{vapidKey:CFG.vapidKey,serviceWorkerRegistration:reg});
+    if(!token)throw new Error("token alınamadı");
+    const h=await sha(token), old=lsGet("sylwa-push");
+    if(h!==old){
+      await withTimeout(setDoc(doc(fs,base+"push/"+h),{token,createdAt:Date.now(),ua:navigator.userAgent}),5000);
+      if(old)deleteDoc(doc(fs,base+"push/"+old)).catch(()=>{});
+      lsSet("sylwa-push",h);
+    }
+  }
+
+  messagingSupported().catch(()=>false).then(ok=>{
+    supported=!!ok&&"serviceWorker" in navigator&&"Notification" in window;paint();
+    if(supported&&perm()==="granted")saveToken().then(paint).catch(()=>{});
+  });
+
+  async function fill(){
+    let s={};try{const d=await getDoc(doc(fs,base+"settings/notify"));if(d.exists())s=d.data()}catch(e){}
+    const c={...N_DEF,...s};
+    $("nWater").checked=!!c.water;$("nSupp").checked=!!c.supplement;$("nBlocks").checked=!!c.blocks;$("nSummary").checked=!!c.summary;
+    $("nSumT").value=c.summaryTime;$("nQs").value=c.quietStart;$("nQe").value=c.quietEnd;
+  }
+  const close=()=>$("notifScrim").classList.remove("open");
+  $("nOpen").addEventListener("click",()=>{paint();fill();$("notifScrim").classList.add("open");window.blip&&window.blip(440,.07,"square",.04)});
+  $("nCancel").addEventListener("click",close);
+  $("notifScrim").addEventListener("click",e=>{if(e.target===$("notifScrim"))close()});
+
+  $("nEnable").addEventListener("click",async()=>{
+    // iPhone: permission must be requested directly from this tap
+    let p;try{p=await Notification.requestPermission()}catch(e){p=perm()}
+    if(p!=="granted"){paint();return}
+    $("nEnable").disabled=true;$("nEnable").textContent="AÇILIYOR...";
+    try{await saveToken();window.toast&&window.toast("BİLDİRİM AÇIK 🔔","saatinde haber veririm");window.arp&&window.arp()}
+    catch(e){$("nHint").textContent="Açılamadı: "+(e&&(e.code||e.message)||"bilinmeyen hata")+". İnternete bağlı olduğundan emin olup tekrar dene.";$("nEnable").disabled=false;return}
+    paint();
+  });
+
+  $("notifForm").addEventListener("submit",async e=>{
+    e.preventDefault();
+    const hm=v=>/^\d{2}:\d{2}$/.test(v);
+    const s={water:$("nWater").checked,supplement:$("nSupp").checked,blocks:$("nBlocks").checked,summary:$("nSummary").checked,
+      summaryTime:$("nSumT").value,quietStart:$("nQs").value,quietEnd:$("nQe").value};
+    if(![s.summaryTime,s.quietStart,s.quietEnd].every(hm))return;
+    withTimeout(setDoc(doc(fs,base+"settings/notify"),s),1500).catch(()=>{if(window.banner)window.banner("Bildirim ayarları kaydedilemedi.")});
+    close();window.blip&&window.blip(392,.12);window.toast&&window.toast("KAYDEDİLDİ");
+  });
+
+  $("nTest").addEventListener("click",()=>{
+    withTimeout(setDoc(doc(fs,base+"notify/state"),{testRequest:Date.now()},{merge:true}),1500).catch(()=>{});
+    window.blip&&window.blip(523,.1);
+    window.toast&&window.toast("TEST İSTENDİ",isOn()?"15 dakika içinde gelir":"önce bildirimleri aç");
+  });
 }
 
 function askImport(uid){

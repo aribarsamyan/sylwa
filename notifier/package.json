@@ -1,0 +1,11 @@
+{
+  "name": "sylwa-notifier",
+  "private": true,
+  "description": "SYLWA push reminders, run by GitHub Actions",
+  "main": "notify.js",
+  "scripts": { "start": "node notify.js" },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "firebase-admin": "^13.0.0"
+  }
+}
