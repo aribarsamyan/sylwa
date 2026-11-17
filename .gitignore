@@ -1,0 +1,6 @@
+# Kişisel veri ve eski artifact sürümü repoya girmez
+*-export.json
+index-claude-artifact.html
+node_modules/
+.DS_Store
+Thumbs.db

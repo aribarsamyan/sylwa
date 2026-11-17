@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SYLWA</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SYLWA">
+<meta name="theme-color" content="#1A1230">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=VT323&family=Archivo:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+/* Concept: SYLWA, a lavender plastic groovebox. LCD = player stats, 7 step buttons = days, a water channel of pads, each task = a sequencer channel with a light-up pad. Single visual world, no dark variant. */
+:root{
+  --body:#C9B3F2; --body-hi:#DCCBFA; --body-lo:#A88BDF; --bezel:#2A1F45; --ink:#22163F;
+  --lcd:#B8CC9A; --lcd-ink:#1F2A14; --lcd-dim:#8FA472;
+  --pad:#E9DEFF; --pad-edge:#7F63BE; --rec:#FF4F6E; --paper:#FFF7E6;
+  --c-muzik:#B66BFF; --c-ingilizce:#5CA8FF; --c-spor:#3FE0A1; --c-ev:#FFB347;
+  --c-kisisel:#C9C2E8; --c-dinlenme:#FF7FCB; --c-planlama:#FFE066; --c-serbest:#5FE3E8; --c-takviye:#FF8A5C;
+  --water:#7FC8FF;
+  --f-label:"Rubik Mono One","Archivo",system-ui,sans-serif;
+  --f-lcd:"VT323",ui-monospace,monospace;
+  --f-body:"Archivo",system-ui,-apple-system,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:
+  radial-gradient(circle at 20% 10%,#3B2A63 0,transparent 40%),
+  radial-gradient(circle at 90% 80%,#4A2D5E 0,transparent 45%),#1A1230;
+  color:var(--ink);font-family:var(--f-body);font-weight:600;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer;border:none;background:none;padding:0}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--rec);outline-offset:3px}
+.wrap{max-width:560px;margin:0 auto;padding:max(14px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) calc(120px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+
+/* device shell */
+.device{position:relative;background:linear-gradient(160deg,var(--body-hi),var(--body) 40%,var(--body-lo));border-radius:30px;padding:18px 16px 20px;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.55),inset 0 -6px 0 rgba(60,30,110,.25),0 18px 0 #120B24,0 30px 50px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:16px}
+.screw{position:absolute;width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#EEE6FF,#8A72BF);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+.screw::after{content:"";position:absolute;left:2px;right:2px;top:5px;height:2px;background:rgba(40,20,80,.5);transform:rotate(35deg)}
+.s1{top:10px;left:10px}.s2{top:10px;right:10px}.s3{bottom:10px;left:10px}.s4{bottom:10px;right:10px}
+.brand{display:flex;justify-content:space-between;align-items:center;padding:0 14px}
+.brand h1{margin:0;font-family:var(--f-label);font-size:17px;letter-spacing:.02em;color:var(--ink);font-weight:400}
+.brand h1 em{font-style:normal;color:#fff;background:var(--ink);padding:1px 6px;border-radius:4px;margin-left:4px;font-size:12px;vertical-align:3px}
+.brand .sub{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--bezel);opacity:.7;display:block;margin-top:2px}
+.leds{display:flex;gap:6px}
+.led{width:9px;height:9px;border-radius:50%;background:#6B5596;box-shadow:inset 0 1px 1px rgba(0,0,0,.4)}
+.led.on{background:var(--rec);box-shadow:0 0 8px var(--rec),0 0 2px #fff inset}
+.led.blink{animation:blink 1s steps(2) infinite}
+.mute{font-family:var(--f-label);font-size:9px;background:var(--bezel);color:var(--body-hi);padding:6px 8px;border-radius:8px;box-shadow:0 3px 0 #120B24}
+.mute[aria-pressed="false"]{opacity:.55}
+
+/* LCD */
+.bezel{background:var(--bezel);border-radius:16px;padding:10px;box-shadow:inset 0 4px 10px rgba(0,0,0,.6)}
+.lcd{background:linear-gradient(180deg,#C3D6A6,var(--lcd));border-radius:8px;padding:10px 12px;font-family:var(--f-lcd);color:var(--lcd-ink);font-size:22px;line-height:1.05;
+  box-shadow:inset 0 0 0 2px rgba(0,0,0,.12),inset 0 8px 18px rgba(0,0,0,.15);position:relative;overflow:hidden;font-variant-numeric:tabular-nums}
+.lcd::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.05) 0 1px,transparent 1px 3px);pointer-events:none}
+.lcd .r{display:flex;justify-content:space-between;gap:8px;white-space:nowrap}
+.lcd .big{font-size:40px;line-height:.9}
+.lcd .dim{color:var(--lcd-dim)}
+.lcd .blocks{letter-spacing:-1px}
+.lcd .msg{min-height:22px}
+
+/* step buttons (days) */
+.steps{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}
+.step{display:flex;flex-direction:column;align-items:center;gap:5px}
+.step .key{width:100%;aspect-ratio:1/1.05;border-radius:10px;background:linear-gradient(180deg,#F5EEFF,#D9C9FA);box-shadow:0 5px 0 var(--pad-edge),0 6px 0 #4B3880;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--f-label);font-size:10px;transition:transform .08s,box-shadow .08s;position:relative}
+.step .key b{font-family:var(--f-lcd);font-size:20px;font-weight:400;line-height:.9}
+.step .key .l{position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:#B8A5DC}
+.step.sel .key{transform:translateY(4px);box-shadow:0 1px 0 var(--pad-edge),0 2px 0 #4B3880;background:linear-gradient(180deg,#fff,#EDE3FF)}
+.step.sel .key .l{background:var(--rec);box-shadow:0 0 8px var(--rec)}
+.step.today .key{outline:2px dashed var(--ink);outline-offset:2px}
+.step .meter{width:100%;height:6px;border-radius:3px;background:rgba(34,22,63,.25);overflow:hidden}
+.step .meter i{display:block;height:100%;background:var(--ink)}
+
+/* section label */
+.lbl{font-family:var(--f-label);font-size:10px;letter-spacing:.06em;display:flex;align-items:center;gap:8px;color:var(--ink)}
+.lbl::after{content:"";flex:1;height:2px;background:repeating-linear-gradient(90deg,var(--ink) 0 4px,transparent 4px 8px);opacity:.35}
+
+/* water channel */
+.water{display:grid;grid-template-columns:repeat(6,1fr) auto;gap:8px;align-items:center}
+.wpad{display:grid;place-items:center;transition:transform .08s;filter:drop-shadow(0 3px 0 #4B3880)}
+.wpad svg{width:100%;max-width:42px;height:auto;shape-rendering:crispEdges;display:block}
+.wpad .o{fill:var(--ink)}
+.wpad .f{fill:#EFE6FF}
+.wpad.on{filter:drop-shadow(0 3px 0 #2D5F9A) drop-shadow(0 0 6px rgba(127,200,255,.8))}
+.wpad.on .f{fill:var(--water)}
+.wpad.on .h{fill:#FFFFFF}
+.wpad.on .d{fill:#3E8FD9}
+.wpad:active{transform:translateY(3px) scale(.92)}
+.wlcd{background:var(--bezel);color:var(--lcd);font-family:var(--f-lcd);font-size:20px;padding:6px 8px;border-radius:8px;white-space:nowrap}
+
+/* channels (tasks) */
+.chs{display:flex;flex-direction:column;gap:10px}
+.ch{display:grid;grid-template-columns:62px 1fr 64px;gap:10px;align-items:center;background:rgba(255,255,255,.28);border-radius:14px;padding:8px;box-shadow:inset 0 2px 0 rgba(255,255,255,.4),inset 0 -2px 0 rgba(60,30,110,.18);text-align:left;width:100%}
+.ch .t{background:var(--bezel);color:var(--lcd);font-family:var(--f-lcd);font-size:19px;line-height:.95;text-align:center;border-radius:8px;padding:6px 2px}
+.ch .t span{display:block;color:#7E8F63;font-size:16px}
+.ch .name{font-weight:800;font-size:15px;line-height:1.25;color:var(--ink)}
+.ch .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;align-items:center}
+.tag{font-family:var(--f-label);font-size:8.5px;padding:3px 6px 2px;border-radius:3px;background:var(--cc);color:var(--ink);transform:rotate(-2deg);box-shadow:1px 2px 0 rgba(34,22,63,.35)}
+.tag.xp{background:var(--paper);transform:rotate(1.5deg)}
+.tag.now{background:var(--rec);color:#fff;animation:blink 1s steps(2) infinite}
+.ch .note{display:block;font-size:12.5px;line-height:1.35;color:#43346E;margin-top:5px;font-weight:500}
+.pad{width:64px;height:64px;border-radius:12px;background:linear-gradient(180deg,#F7F1FF,var(--pad));box-shadow:inset 0 -6px 0 rgba(90,60,150,.22),0 5px 0 var(--pad-edge),0 6px 0 #4B3880;position:relative;transition:transform .08s,box-shadow .08s,background .2s;display:grid;place-items:center}
+.pad::before{content:"";position:absolute;inset:8px;border-radius:7px;border:2px solid color-mix(in srgb,var(--cc) 60%,transparent)}
+.pad svg{width:28px;height:28px;opacity:0;transform:scale(.3) rotate(-20deg);transition:all .25s cubic-bezier(.3,1.7,.5,1)}
+.ch:active .pad{transform:translateY(4px);box-shadow:inset 0 -2px 0 rgba(90,60,150,.22),0 1px 0 var(--pad-edge),0 2px 0 #4B3880}
+.ch.done .pad{background:radial-gradient(circle at 50% 40%,#fff 0,var(--cc) 55%);box-shadow:0 0 22px var(--cc),0 0 6px var(--cc),inset 0 -6px 0 rgba(0,0,0,.15),0 5px 0 var(--pad-edge),0 6px 0 #4B3880}
+.ch.done .pad svg{opacity:1;transform:scale(1) rotate(0)}
+.ch.done .name{text-decoration:line-through;text-decoration-thickness:3px;text-decoration-color:var(--cc)}
+.ch.done{background:rgba(255,255,255,.14)}
+.ch.live{box-shadow:inset 0 0 0 3px var(--rec),inset 0 2px 0 rgba(255,255,255,.4)}
+.ch .edit{display:none;font-family:var(--f-label);font-size:9px;background:var(--bezel);color:var(--body-hi);border-radius:10px;width:64px;height:64px;place-items:center;text-align:center;line-height:1.3}
+.editing .ch .pad{display:none}
+.editing .ch .edit{display:grid}
+.empty{font-family:var(--f-lcd);font-size:22px;text-align:center;background:var(--bezel);color:var(--lcd);border-radius:12px;padding:22px 10px}
+
+/* dock */
+.dock{position:fixed;left:0;right:0;bottom:0;padding:12px max(14px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));display:flex;justify-content:center;gap:12px;z-index:6;background:linear-gradient(transparent,#1A1230 40%)}
+.hw{font-family:var(--f-label);font-size:12px;padding:14px 18px;border-radius:14px;background:linear-gradient(180deg,var(--body-hi),var(--body));color:var(--ink);box-shadow:0 5px 0 var(--pad-edge),0 6px 0 #120B24;display:flex;align-items:center;gap:8px}
+.hw:active{transform:translateY(4px);box-shadow:0 1px 0 var(--pad-edge),0 2px 0 #120B24}
+.hw .dot{width:11px;height:11px;border-radius:50%;background:#7a2a3a}
+.hw.rec-on .dot{background:var(--rec);box-shadow:0 0 10px var(--rec);animation:blink 1s steps(2) infinite}
+.hw.go{background:linear-gradient(180deg,#3A2C66,var(--bezel));color:var(--lcd);box-shadow:0 5px 0 #0F0920,0 6px 0 #000}
+
+/* sheet: printed manual card */
+.scrim{position:fixed;inset:0;background:rgba(10,6,22,.6);display:none;z-index:20;align-items:flex-end;justify-content:center}
+.scrim.open{display:flex}
+.sheet{background:var(--paper);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:12px;max-height:92%;overflow:auto;
+  background-image:repeating-linear-gradient(0deg,transparent 0 27px,rgba(120,90,180,.15) 27px 28px)}
+.sheet h3{margin:0;font-family:var(--f-label);font-size:16px;font-weight:400;transform:rotate(-1deg);display:inline-block;background:var(--c-muzik);padding:4px 10px;align-self:flex-start;box-shadow:3px 3px 0 var(--ink)}
+.field{display:flex;flex-direction:column;gap:5px;font-family:var(--f-label);font-size:9.5px;color:var(--ink)}
+.field input,.field select{font-family:var(--f-body);font-weight:700;font-size:16px;color:var(--ink);background:#fff;border:3px solid var(--ink);border-radius:10px;padding:9px 11px;box-shadow:3px 3px 0 var(--ink)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.acts{display:flex;gap:10px;align-items:center;margin-top:6px}
+.btn{font-family:var(--f-label);font-size:11px;padding:12px 14px;border-radius:10px;border:3px solid var(--ink);background:#fff;box-shadow:3px 3px 0 var(--ink)}
+.btn.primary{background:var(--c-spor)}
+.btn.danger{background:var(--rec);color:#fff}
+.btn:active{transform:translate(3px,3px);box-shadow:none}
+
+/* screens & tools */
+.scr[hidden]{display:none!important}
+.scr{display:flex;flex-direction:column;gap:16px}
+.tools{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.hw.sm{font-size:10px;padding:10px 12px}
+.joker{display:flex;align-items:center;gap:10px}
+.joker .hw{white-space:nowrap;flex-shrink:0}
+.joker .hint{font-size:12px;color:#43346E;font-weight:600;line-height:1.3}
+.hw.star{background:linear-gradient(180deg,#FFF3B8,var(--c-planlama));box-shadow:0 5px 0 #B8962A,0 6px 0 #120B24}
+.hw.armed{background:var(--rec);color:#fff;box-shadow:0 5px 0 #A3243B,0 6px 0 #120B24;animation:blink 1s steps(2) infinite}
+.hw[disabled]{opacity:.45;cursor:not-allowed}
+.step.jk .meter i{background:repeating-linear-gradient(45deg,var(--ink) 0 4px,var(--c-planlama) 4px 8px)}
+
+/* tabs dock */
+.dock .tab{flex:1;max-width:170px;flex-direction:column;gap:4px;padding:10px 6px 9px;font-size:10px;justify-content:center}
+.dock .tab .ic{font-family:var(--f-lcd);font-size:22px;line-height:.8}
+.dock .tab.on{transform:translateY(4px);box-shadow:0 1px 0 var(--pad-edge),0 2px 0 #120B24;background:linear-gradient(180deg,#fff,var(--body-hi))}
+.dock .tab .tl{width:7px;height:7px;border-radius:50%;background:#8A72BF}
+.dock .tab.on .tl{background:var(--rec);box-shadow:0 0 8px var(--rec)}
+
+/* beat vault: cassettes */
+.tapes{display:flex;flex-direction:column;gap:14px}
+.tape{background:linear-gradient(180deg,#3A2C66,var(--bezel));border-radius:14px;padding:10px 10px 12px;box-shadow:0 6px 0 #120B24;position:relative}
+.tape::before,.tape::after{content:"";position:absolute;bottom:5px;width:6px;height:6px;border-radius:50%;background:#5B4891}
+.tape::before{left:8px}.tape::after{right:8px}
+.tape .label{background:var(--paper);border-radius:6px;padding:8px 10px 9px;border-top:9px solid var(--c-muzik);background-image:repeating-linear-gradient(0deg,transparent 0 17px,rgba(120,90,180,.18) 17px 18px);transform:rotate(-.6deg)}
+.tape .nm{font-family:var(--f-label);font-size:14px;line-height:1.2;word-break:break-word}
+.tape .mt{font-family:var(--f-lcd);font-size:19px;color:#43346E;margin-top:2px}
+.tape .nt{font-size:12.5px;color:#43346E;margin-top:3px;font-weight:500}
+.tape .win{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 18px 0;background:#120B24;border-radius:22px;padding:6px 14px}
+.reel{width:28px;height:28px;border-radius:50%;border:5px dotted var(--body);animation:spin 4s linear infinite}
+.tape .acts2{display:flex;gap:8px}
+.tbtn{font-family:var(--f-label);font-size:9px;padding:7px 9px;border-radius:7px;background:var(--body-hi);color:var(--ink);text-decoration:none;box-shadow:0 3px 0 var(--pad-edge)}
+.tbtn.play{background:var(--c-spor)}
+.tbtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--pad-edge)}
+
+/* outreach */
+.sends{display:flex;flex-direction:column;gap:10px}
+.send{background:rgba(255,255,255,.3);border-radius:14px;padding:10px 12px;box-shadow:inset 0 2px 0 rgba(255,255,255,.4),inset 0 -2px 0 rgba(60,30,110,.18);display:flex;flex-direction:column;gap:6px}
+.send.due{box-shadow:inset 0 0 0 3px var(--rec)}
+.send .top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.send .who{font-weight:800;font-size:15.5px;word-break:break-word}
+.send .what{font-size:13px;color:#43346E;font-weight:600}
+.send .age{font-family:var(--f-lcd);font-size:18px;background:var(--bezel);color:var(--lcd);padding:2px 7px;border-radius:6px;white-space:nowrap}
+.send .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.st-bekliyor{background:var(--paper)}
+.st-tekrar{background:var(--rec);color:#fff;animation:blink 1s steps(2) infinite}
+.st-cevap{background:var(--c-ingilizce)}
+.st-olumlu{background:var(--c-spor)}
+.st-olumsuz{background:var(--c-kisisel)}
+.field textarea{font-family:var(--f-body);font-weight:700;font-size:16px;color:var(--ink);background:#fff;border:3px solid var(--ink);border-radius:10px;padding:9px 11px;box-shadow:3px 3px 0 var(--ink);resize:vertical;min-height:60px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* fx */
+.toast{position:fixed;left:50%;top:20%;transform:translate(-50%,-12px) rotate(-3deg) scale(.85);background:var(--bezel);padding:8px;border-radius:14px;opacity:0;pointer-events:none;z-index:30;transition:all .3s cubic-bezier(.3,1.6,.5,1);box-shadow:0 10px 0 #0B0618,0 20px 40px rgba(0,0,0,.5);max-width:88%}
+.toast div{background:var(--lcd);color:var(--lcd-ink);font-family:var(--f-lcd);font-size:34px;line-height:1;padding:12px 18px;border-radius:8px;text-align:center}
+.toast small{display:block;font-size:20px;margin-top:4px}
+.toast.show{opacity:1;transform:translate(-50%,0) rotate(-3deg) scale(1)}
+.float{position:fixed;font-family:var(--f-label);font-size:14px;color:var(--ink);background:var(--paper);padding:3px 7px;border-radius:4px;box-shadow:2px 2px 0 var(--ink);pointer-events:none;z-index:25;animation:up 1s ease-out forwards}
+#fx{position:fixed;inset:0;pointer-events:none;z-index:24;width:100%;height:100%}
+.banner{background:var(--rec);color:#fff;font-weight:700;border-radius:10px;padding:9px 12px;font-size:13px;display:none}
+.banner.show{display:block}
+@keyframes up{to{transform:translateY(-70px) rotate(-8deg);opacity:0}}
+@keyframes blink{50%{opacity:.25}}
+@keyframes shake{25%{transform:rotate(-1.2deg)}75%{transform:rotate(1.2deg)}}
+.device.bump{animation:shake .25s 2}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* gate: login + import (PWA build) */
+body.locked>.wrap,body.locked>.dock{display:none}
+.gate[hidden]{display:none}
+.gate .wrap{padding-bottom:max(24px,env(safe-area-inset-bottom))}
+.gform{display:flex;flex-direction:column;gap:12px;padding:0 4px}
+.gform .hw{justify-content:center;margin-top:6px}
+.gform[hidden]{display:none}
+.lcdbtn{display:block;width:100%;background:var(--bezel);border-radius:16px;padding:10px;box-shadow:0 6px 0 #120B24;transition:transform .08s,box-shadow .08s}
+.lcdbtn span{display:block;background:linear-gradient(180deg,#C3D6A6,var(--lcd));color:var(--lcd-ink);font-family:var(--f-lcd);font-size:30px;line-height:1;padding:20px 10px;border-radius:8px;text-align:center;animation:blink 1.2s steps(2) infinite}
+.lcdbtn:active{transform:translateY(4px);box-shadow:0 2px 0 #120B24}
+.lcdbtn[hidden]{display:none}
+.gnote{font-size:12.5px;line-height:1.35;color:#43346E;font-weight:500;text-align:center;margin:0}
+@media (max-width:380px){.ch{grid-template-columns:54px 1fr 56px}.pad,.ch .edit{width:56px;height:56px}.lcd{font-size:19px}.lcd .big{font-size:34px}.brand h1{font-size:14px}}
+</style>
+</head>
+<body class="locked">
+<div class="gate" id="gate">
+<div class="wrap">
+<main class="device">
+  <i class="screw s1"></i><i class="screw s2"></i><i class="screw s3"></i><i class="screw s4"></i>
+  <div class="brand">
+    <div><h1>SYLWA<em>2027</em></h1><span class="sub">haftalık görev sequencer'ı</span></div>
+    <div class="leds"><i class="led on blink"></i><i class="led"></i></div>
+  </div>
+  <div class="bezel"><div class="lcd" aria-live="polite">
+    <div class="r"><span>SYLWA · GİRİŞ</span><span class="dim">●</span></div>
+    <div class="r msg"><span id="gateMsg">▶ BAĞLANIYOR...</span></div>
+  </div></div>
+  <form class="gform" id="loginForm" hidden>
+    <label class="field" for="lEmail">E-POSTA<input id="lEmail" type="email" autocomplete="username" inputmode="email" autocapitalize="off" required></label>
+    <label class="field" for="lPass">ŞİFRE<input id="lPass" type="password" autocomplete="current-password" required></label>
+    <button class="hw go" type="submit" id="lBtn">GİRİŞ ▶</button>
+  </form>
+  <button class="lcdbtn" id="importBtn" type="button" hidden><span>VERİ YOK · İÇE AKTAR</span></button>
+  <p class="gnote" id="importNote" hidden>Dışa aktarım (.json) dosyasını seç. Bunu bir kere, bilgisayardan yapman yeterli.</p>
+  <input type="file" id="importFile" accept=".json,application/json" hidden>
+</main>
+</div>
+</div>
+<canvas id="fx"></canvas>
+<div class="wrap">
+<main class="device" id="device">
+  <i class="screw s1"></i><i class="screw s2"></i><i class="screw s3"></i><i class="screw s4"></i>
+  <div class="brand">
+    <div><h1>SYLWA<em>2027</em></h1><span class="sub">haftalık görev sequencer'ı</span></div>
+    <div class="leds"><button class="mute" id="logout" type="button">ÇIKIŞ</button><button class="mute" id="mute" type="button" aria-pressed="true">SES ON</button><i class="led on blink"></i><i class="led" id="ledDay"></i></div>
+  </div>
+  <div class="bezel"><div class="lcd" id="lcd" aria-live="polite">
+    <div class="r"><span>LV</span><span class="dim">XP</span></div>
+    <div class="r"><span class="big">01</span><span class="blocks">□□□□□□□□□□</span></div>
+    <div class="r msg"><span>YÜKLENİYOR...</span></div>
+  </div></div>
+  <div class="banner" id="banner" role="status"></div>
+  <section class="scr" id="scrToday">
+    <nav class="steps" id="steps" aria-label="Günler"></nav>
+    <div class="joker"><button class="hw sm star" id="jokerBtn" type="button">★ JOKER ×2</button><span class="hint" id="jokerHint">Kötü gün mü? Joker kullan, serin bozulmasın. Ayda 2 hak.</span></div>
+    <div class="lbl">SU KANALI · DAMLA BAŞI 500 ML</div>
+    <section class="water" id="water" aria-label="Su takibi"></section>
+    <div class="lbl" id="chLbl">KANALLAR</div>
+    <section class="chs" id="list"></section>
+    <div class="tools">
+      <button class="hw sm" id="editBtn" type="button"><span class="dot"></span><span id="editTxt">REC · DÜZENLE</span></button>
+      <button class="hw sm go" id="addBtn" type="button">＋ KANAL EKLE</button>
+    </div>
+  </section>
+  <section class="scr" id="scrKasa" hidden>
+    <div class="lbl">BEAT KASASI</div>
+    <div class="tools"><button class="hw sm go" id="addBeat" type="button">＋ BEAT EKLE</button></div>
+    <section class="tapes" id="tapes"></section>
+  </section>
+  <section class="scr" id="scrSend" hidden>
+    <div class="lbl">GÖNDERİM TAKİBİ</div>
+    <div class="tools"><button class="hw sm go" id="addSend" type="button">＋ GÖNDERİM EKLE</button></div>
+    <section class="sends" id="sends"></section>
+  </section>
+</main>
+</div>
+<nav class="dock" aria-label="Ekranlar">
+  <button class="hw tab on" data-scr="today" type="button" aria-pressed="true"><span class="tl"></span><span class="ic">▦</span>BUGÜN</button>
+  <button class="hw tab" data-scr="kasa" type="button" aria-pressed="false"><span class="tl"></span><span class="ic">◎◎</span>KASA</button>
+  <button class="hw tab" data-scr="send" type="button" aria-pressed="false"><span class="tl"></span><span class="ic">✉</span>GÖNDERİM</button>
+</nav>
+<div class="scrim" id="scrim">
+  <form class="sheet" id="form">
+    <h3 id="formTitle">YENİ KANAL</h3>
+    <label class="field" for="fTitle">NE YAPACAKSIN?<input id="fTitle" required maxlength="80" placeholder="Örn. Beat'e 808 ekle"></label>
+    <div class="row2">
+      <label class="field" for="fDay">GÜN<select id="fDay"></select></label>
+      <label class="field" for="fCat">KATEGORİ<select id="fCat"></select></label>
+    </div>
+    <div class="row2">
+      <label class="field" for="fStart">BAŞLANGIÇ<input id="fStart" type="time" required></label>
+      <label class="field" for="fEnd">BİTİŞ<input id="fEnd" type="time" required></label>
+    </div>
+    <label class="field" for="fNote">NOT (İSTEĞE BAĞLI)<input id="fNote" maxlength="160"></label>
+    <div class="acts">
+      <button class="btn danger" id="delBtn" type="button">SİL</button>
+      <span style="flex:1"></span>
+      <button class="btn" id="cancelBtn" type="button">VAZGEÇ</button>
+      <button class="btn primary" type="submit">KAYDET</button>
+    </div>
+  </form>
+</div>
+<div class="scrim" id="beatScrim">
+  <form class="sheet" id="beatForm">
+    <h3 id="beatTitle">YENİ BEAT</h3>
+    <label class="field" for="bName">BEAT'İN ADI<input id="bName" required maxlength="60" placeholder="Örn. Midnight Drill"></label>
+    <div class="row2">
+      <label class="field" for="bBpm">BPM<input id="bBpm" type="number" inputmode="numeric" min="40" max="300" placeholder="140"></label>
+      <label class="field" for="bKey">TON<input id="bKey" maxlength="12" placeholder="Örn. C# minör"></label>
+    </div>
+    <label class="field" for="bDate">BİTİŞ TARİHİ<input id="bDate" type="date" required></label>
+    <label class="field" for="bLink">DRIVE / DROPBOX LİNKİ<input id="bLink" type="url" inputmode="url" placeholder="https://drive.google.com/..."></label>
+    <label class="field" for="bNote">NOT<input id="bNote" maxlength="160" placeholder="Örn. Hook'a vokal chop lazım"></label>
+    <div class="acts">
+      <button class="btn danger" id="bDel" type="button">SİL</button>
+      <span style="flex:1"></span>
+      <button class="btn" id="bCancel" type="button">VAZGEÇ</button>
+      <button class="btn primary" type="submit">KASAYA KOY</button>
+    </div>
+  </form>
+</div>
+<div class="scrim" id="sendScrim">
+  <form class="sheet" id="sendForm">
+    <h3 id="sendTitle">YENİ GÖNDERİM</h3>
+    <label class="field" for="sTo">KİME?<input id="sTo" required maxlength="60" placeholder="Örn. @prodüktörhesabı"></label>
+    <div class="row2">
+      <label class="field" for="sPlat">NEREDEN<select id="sPlat"><option>Instagram</option><option>TikTok</option><option>Mail</option><option>BeatStars</option><option>YouTube</option><option>Diğer</option></select></label>
+      <label class="field" for="sDate">TARİH<input id="sDate" type="date" required></label>
+    </div>
+    <label class="field" for="sWhat">NE GÖNDERDİN?<input id="sWhat" list="beatNames" maxlength="80" placeholder="Beat adı, loop paketi..."><datalist id="beatNames"></datalist></label>
+    <label class="field" for="sStatus">DURUM<select id="sStatus"><option value="bekliyor">Cevap bekliyor</option><option value="cevap">Cevap geldi</option><option value="olumlu">Olumlu (kullanacak / collab)</option><option value="olumsuz">Olumsuz</option></select></label>
+    <label class="field" for="sNote">NOT<input id="sNote" maxlength="160"></label>
+    <div class="acts">
+      <button class="btn danger" id="sDel" type="button">SİL</button>
+      <span style="flex:1"></span>
+      <button class="btn" id="sCancel" type="button">VAZGEÇ</button>
+      <button class="btn primary" type="submit">KAYDET</button>
+    </div>
+  </form>
+</div>
+<div class="toast" id="toast"><div></div></div>
+
+<script>
+const CATS={
+  muzik:{label:"MÜZİK",xp:20,hz:220},
+  spor:{label:"SPOR",xp:25,hz:165},
+  ingilizce:{label:"İNGİLİZCE",xp:15,hz:262},
+  ev:{label:"EV İŞİ",xp:10,hz:196},
+  dinlenme:{label:"DİNLENME",xp:10,hz:147},
+  planlama:{label:"PLAN",xp:15,hz:294},
+  takviye:{label:"TAKVİYE",xp:10,hz:330},
+  kisisel:{label:"KİŞİSEL",xp:5,hz:175},
+  serbest:{label:"SERBEST",xp:5,hz:247}
+};
+const DAYS=["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
+const SHORT=["PZT","SAL","ÇRŞ","PER","CUM","CMT","PAZ"];
+const WATER_XP=5, WATER_BONUS=20, WATER_N=6, DAY_GOAL=0.8;
+const JOKERS=2, FOLLOW_DAYS=10, BEAT_GOAL=3, SEND_GOAL=5, XP_BEAT=30, XP_SEND=15, XP_FOLLOW=10;
+const $=id=>document.getElementById(id);
+
+function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+const now=new Date();
+const todayIdx=(now.getDay()+6)%7;
+const monday=new Date(now.getFullYear(),now.getMonth(),now.getDate()-todayIdx);
+const DATES=[...Array(7)].map((_,i)=>iso(new Date(monday.getFullYear(),monday.getMonth(),monday.getDate()+i)));
+const WEEK=DATES[0], TODAY=DATES[todayIdx];
+function prevDay(s){const [y,m,d]=s.split("-").map(Number);return iso(new Date(y,m-1,d-1))}
+
+const S={plan:null,stats:{xp:0,streak:0,best:0,lastFull:""},week:{},sel:todayIdx,edit:false,loaded:false,editingId:null,msg:"",scr:"today",beats:[],sends:[]};
+const MONTH=TODAY.slice(0,7);
+let jokerArmed=false, jokerT;
+function daysSince(d){if(!d)return 0;const [y,m,dd]=d.split("-").map(Number);return Math.round((new Date(now.getFullYear(),now.getMonth(),now.getDate())-new Date(y,m-1,dd))/864e5)}
+function jokersLeft(){const j=S.stats.joker||{};return j.month===MONTH?Math.max(0,JOKERS-(j.used||0)):JOKERS}
+function beatsThisWeek(){return S.beats.filter(b=>DATES.includes(b.date)).length}
+function sendsThisWeek(){return S.sends.filter(s=>DATES.includes(s.date)).length}
+function sendDue(s){return s.status==="bekliyor"&&daysSince(s.last||s.date)>=FOLLOW_DAYS}
+function safeLink(u){return /^https:\/\/[^\s"'<>]+$/i.test(u||"")?u:""}
+let db=null, canWrite=true, soundOn=true;
+try{soundOn=localStorage.getItem("sylwa-sound")!=="off"}catch(e){}
+
+function levelInfo(xp){let L=1,need=100,acc=0;while(xp>=acc+need){acc+=need;L++;need=100+(L-1)*25}return{L,into:xp-acc,need}}
+function itemsFor(i){if(!S.plan)return[];return S.plan.items.filter(it=>it.d===i||it.d===-1).slice().sort((a,b)=>a.s.localeCompare(b.s)||a.e.localeCompare(b.e))}
+function prog(date){return S.week[date]||{date,week:WEEK,done:{},water:0}}
+function pct(i,p){p=p||prog(DATES[i]);if(p.joker)return 1;const its=itemsFor(i);const done=its.filter(it=>p.done&&p.done[it.id]).length;return(done+(p.water||0)/WATER_N)/(its.length+1)}
+function nowHM(){const d=new Date();return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function banner(msg){const b=$("banner");b.textContent=msg||"";b.classList.toggle("show",!!msg)}
+const pad2=n=>String(n).padStart(2,"0");
+
+/* ---------- render ---------- */
+function renderLCD(){
+  const st=S.stats, li=levelInfo(st.xp||0), cells=Math.round(li.into/li.need*10);
+  const alive=st.lastFull===TODAY||st.lastFull===prevDay(TODAY), streak=alive?(st.streak||0):0;
+  const bar=`<span class="blocks">${"■".repeat(cells)}<span class="dim">${"□".repeat(10-cells)}</span></span>`;
+  let html;
+  if(S.scr==="kasa"){
+    const n=S.beats.length, w=beatsThisWeek();
+    html=`<div class="r"><span>KASA</span><span>BU HAFTA ${w}/${BEAT_GOAL} ${w>=BEAT_GOAL?"♥":""}</span></div>
+      <div class="r"><span class="big">${pad2(n)}</span><span>BEAT<br><span style="font-size:18px">LV ${pad2(li.L)} · ${st.xp||0} XP</span></span></div>
+      <div class="r msg"><span>▶ ${esc(S.msg||"YENİ BEAT +"+XP_BEAT+" XP")}</span></div>`;
+  }else if(S.scr==="send"){
+    const n=S.sends.length, w=sendsThisWeek(), wait=S.sends.filter(s=>s.status==="bekliyor").length, due=S.sends.filter(sendDue).length;
+    html=`<div class="r"><span>GÖNDERİM</span><span>BU HAFTA ${w}/${SEND_GOAL} ${w>=SEND_GOAL?"♥":""}</span></div>
+      <div class="r"><span class="big">${pad2(n)}</span><span>BEKLEYEN ${pad2(wait)}<br><span style="font-size:18px">${due?"TEKRAR YAZ: "+due+" KİŞİ":"TAKİP GEREKEN YOK"}</span></span></div>
+      <div class="r msg"><span>▶ ${esc(S.msg||"YOLLA +"+XP_SEND+" · TAKİP +"+XP_FOLLOW)}</span></div>`;
+  }else{
+    const i=S.sel, its=itemsFor(i), p=prog(DATES[i]), done=its.filter(it=>p.done[it.id]).length;
+    const msg=S.msg||(!S.loaded?"YÜKLENİYOR...":p.joker?`${SHORT[i]} ${DATES[i].slice(8)} · ★ JOKER GÜNÜ`:`${SHORT[i]} ${DATES[i].slice(8)} · ${done}/${its.length} · %${Math.round(Math.min(1,pct(i))*100)}`);
+    html=`<div class="r"><span>LV</span><span>SERİ ${streak?"♥":"·"} ${pad2(streak)} GÜN</span></div>
+      <div class="r"><span class="big">${pad2(li.L)}</span><span>${bar}<br><span style="font-size:18px">${li.into}/${li.need} XP · EN İYİ ${pad2(st.best||0)}</span></span></div>
+      <div class="r"><span>BEAT ${beatsThisWeek()}/${BEAT_GOAL}</span><span>JOKER ${"★".repeat(jokersLeft())}${"☆".repeat(JOKERS-jokersLeft())}</span></div>
+      <div class="r msg"><span>▶ ${esc(msg)}</span></div>`;
+  }
+  $("lcd").innerHTML=html;
+}
+function renderJoker(){
+  const left=jokersLeft(), date=DATES[S.sel], p=prog(date), b=$("jokerBtn");
+  const usable=left>0&&date<=TODAY&&!p.joker&&pct(S.sel)<DAY_GOAL;
+  b.disabled=!usable&&!p.joker;
+  b.classList.toggle("armed",jokerArmed&&usable);
+  b.textContent=p.joker?"★ JOKER KULLANILDI":jokerArmed&&usable?"EMİN MİSİN?":"★ JOKER ×"+left;
+  $("jokerHint").textContent=p.joker?"Bu gün serini korudun. Yarın kaldığın yerden devam.":
+    date>TODAY?"Joker sadece bugün ya da geçmiş günler için kullanılır.":
+    left===0?"Bu ayın jokerleri bitti. Ayın 1'inde yenilenir.":
+    pct(S.sel)>=DAY_GOAL?"Bu günü zaten tamamladın, jokere gerek yok.":
+    "Kötü gün mü? Joker kullan, serin bozulmasın. Ayda "+JOKERS+" hak.";
+}
+function tapeHTML(b){const link=safeLink(b.link);
+  return `<article class="tape"><div class="label"><div class="nm">${esc(b.name)}</div>
+    <div class="mt">${b.bpm?esc(b.bpm)+" BPM":"— BPM"} · ${esc(b.key||"TON ?")} · ${esc((b.date||"").split("-").reverse().join("."))}</div>
+    ${b.note?`<div class="nt">${esc(b.note)}</div>`:""}</div>
+    <div class="win"><span class="reel"></span><span class="acts2">${link?`<a class="tbtn play" href="${esc(link)}" target="_blank" rel="noopener">▶ DİNLE</a>`:""}<button type="button" class="tbtn" data-beat="${esc(b.id)}">DÜZENLE</button></span><span class="reel"></span></div></article>`}
+function renderKasa(){
+  const list=S.beats.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.created||0)-(a.created||0));
+  $("tapes").innerHTML=list.length?list.map(tapeHTML).join(""):`<div class="empty">KASA BOŞ.<br>İLK BEAT'İNİ BİTİRİNCE BURAYA KOY.</div>`;
+}
+const ST_LABEL={bekliyor:"BEKLİYOR",cevap:"CEVAP GELDİ",olumlu:"OLUMLU ♥",olumsuz:"OLUMSUZ"};
+function renderSends(){
+  const rank=s=>sendDue(s)?0:s.status==="bekliyor"?1:s.status==="olumlu"?2:s.status==="cevap"?3:4;
+  const list=S.sends.slice().sort((a,b)=>rank(a)-rank(b)||(b.date||"").localeCompare(a.date||""));
+  $("sends").innerHTML=list.length?list.map(s=>{const due=sendDue(s), age=daysSince(s.last||s.date);
+    return `<article class="send${due?" due":""}"><div class="top"><div><div class="who">${esc(s.to)}</div>${s.what?`<div class="what">${esc(s.what)}</div>`:""}</div><span class="age">${age===0?"BUGÜN":age+" GÜN"}</span></div>
+      <div class="row"><span class="tag" style="--cc:var(--c-ingilizce)">${esc((s.plat||"").toLocaleUpperCase("tr"))}</span><span class="tag ${due?"st-tekrar":"st-"+esc(s.status)}">${due?"TEKRAR YAZ":ST_LABEL[s.status]||""}</span>${s.follow?`<span class="tag xp">${s.follow}× TAKİP</span>`:""}</div>
+      ${s.note?`<div class="what" style="font-weight:500">${esc(s.note)}</div>`:""}
+      <div class="row">${s.status==="bekliyor"?`<button type="button" class="tbtn play" data-follow="${esc(s.id)}">TEKRAR YAZDIM</button><button type="button" class="tbtn" data-reply="${esc(s.id)}">CEVAP GELDİ</button>`:""}<button type="button" class="tbtn" data-send="${esc(s.id)}">DÜZENLE</button></div></article>`}).join(""):`<div class="empty">HENÜZ GÖNDERİM YOK.<br>İLK LOOP'UNU YOLLA.</div>`;
+}
+function renderSteps(){
+  $("steps").innerHTML=DAYS.map((d,i)=>{const p=Math.round(Math.min(1,pct(i))*100);
+    return `<div class="step${i===S.sel?" sel":""}${i===todayIdx?" today":""}${prog(DATES[i]).joker?" jk":""}"><button type="button" class="key" data-i="${i}" aria-pressed="${i===S.sel}" aria-label="${d}, yüzde ${p}"><i class="l"></i>${SHORT[i]}<b>${DATES[i].slice(8)}</b></button><span class="meter"><i style="width:${p}%"></i></span></div>`}).join("");
+  $("ledDay").classList.toggle("on",pct(S.sel)>=DAY_GOAL);
+}
+/* 11x14 pixel-art drop: X outline, O fill, H highlight, D shade */
+const DROP_MAP=[".....X.....","....XOX....","....XOX....","...XOOOX...","...XOOOX...","..XOOOOOX..",".XOOHOOOOX.",".XOHOOOOOX.","XOOHOOOOOOX","XOOHOOOOOOX","XOOOOOOODOX",".XOOOODDOX.","..XOODDOX..","...XXXXX..."];
+const DROP_SVG=(()=>{let r="";DROP_MAP.forEach((row,y)=>[...row].forEach((ch,x)=>{const c={X:"o",O:"f",H:"h",D:"d"}[ch];
+  if(c){r+=`<rect x="${x}" y="${y}" width="1.02" height="1.02" class="${c==="h"||c==="d"?"f "+c:c}"/>`}}));
+  return `<svg viewBox="0 0 11 14" aria-hidden="true">${r}</svg>`})();
+function renderWater(){
+  const w=prog(DATES[S.sel]).water||0;
+  $("water").innerHTML=[...Array(WATER_N)].map((_,k)=>`<button type="button" class="wpad${k<w?" on":""}" data-k="${k+1}" aria-label="${k+1}. bardak su${k<w?", içildi":""}">${DROP_SVG}</button>`).join("")+`<span class="wlcd">${(w*0.5).toFixed(1)}/3L</span>`;
+}
+function renderList(){
+  const i=S.sel, p=prog(DATES[i]), its=itemsFor(i), hm=nowHM();
+  document.body.classList.toggle("editing",S.edit);
+  $("chLbl").textContent=(i===todayIdx?"BUGÜN · ":"")+DAYS[i].toLocaleUpperCase("tr")+" · KANALLAR";
+  if(!S.loaded){$("list").innerHTML=`<div class="empty">PROGRAM YÜKLENİYOR...</div>`;return}
+  if(!its.length){$("list").innerHTML=`<div class="empty">BU GÜN BOŞ.<br>＋ KANAL EKLE</div>`;return}
+  const check=`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#22163F" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  $("list").innerHTML=its.map(it=>{const c=CATS[it.c]||CATS.serbest, isDone=!!p.done[it.id];
+    const isNow=i===todayIdx&&hm>=it.s&&hm<it.e;
+    return `<button type="button" class="ch${isDone?" done":""}${isNow?" live":""}" data-id="${esc(it.id)}" style="--cc:var(--c-${esc(it.c)},var(--c-serbest))" aria-pressed="${isDone}">
+      <span class="t">${esc(it.s)}<span>${esc(it.e)}</span></span>
+      <span><span class="name">${esc(it.t)}</span>
+        <span class="tags"><span class="tag">${c.label}</span><span class="tag xp">+${c.xp} XP</span>${isNow?'<span class="tag now">● ŞİMDİ</span>':""}</span>
+        ${it.n?`<span class="note">${esc(it.n)}</span>`:""}</span>
+      <span class="pad" aria-hidden="true">${check}</span><span class="edit">DÜZEN<br>LE ›</span></button>`}).join("");
+}
+function render(){
+  $("scrToday").hidden=S.scr!=="today";$("scrKasa").hidden=S.scr!=="kasa";$("scrSend").hidden=S.scr!=="send";
+  document.querySelectorAll(".dock .tab").forEach(t=>{const on=t.dataset.scr===S.scr;t.classList.toggle("on",on);t.setAttribute("aria-pressed",String(on))});
+  renderLCD();
+  if(S.scr==="today"){renderSteps();renderJoker();renderWater();renderList()}
+  else if(S.scr==="kasa")renderKasa();else renderSends();
+  $("editTxt").textContent=S.edit?"BİTTİ":"REC · DÜZENLE";$("editBtn").classList.toggle("rec-on",S.edit);
+  $("mute").textContent=soundOn?"SES ON":"SES OFF";$("mute").setAttribute("aria-pressed",String(soundOn))}
+
+/* ---------- sound (WebAudio, only from taps) ---------- */
+let ac=null;
+function audio(){if(!soundOn)return null;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==="suspended")ac.resume();return ac}catch(e){return null}}
+function blip(hz,len=.14,type="square",vol=.07,when=0){const a=audio();if(!a)return;const t=a.currentTime+when,o=a.createOscillator(),g=a.createGain();
+  o.type=type;o.frequency.setValueAtTime(hz,t);o.frequency.exponentialRampToValueAtTime(hz*1.5,t+len*.6);g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+len);o.connect(g).connect(a.destination);o.start(t);o.stop(t+len+.02)}
+function kick(){const a=audio();if(!a)return;const t=a.currentTime,o=a.createOscillator(),g=a.createGain();o.type="sine";o.frequency.setValueAtTime(140,t);o.frequency.exponentialRampToValueAtTime(40,t+.35);g.gain.setValueAtTime(.5,t);g.gain.exponentialRampToValueAtTime(.001,t+.4);o.connect(g).connect(a.destination);o.start(t);o.stop(t+.42)}
+function arp(){[262,330,392,523,659].forEach((h,k)=>blip(h,.16,"square",.06,k*.09))}
+function unblip(){blip(110,.12,"triangle",.08)}
+
+/* ---------- writes ---------- */
+const pending={}, running={};
+function write(path,data){if(!db||!canWrite)return;pending[path]=JSON.parse(JSON.stringify(data));if(!running[path])flush(path)}
+async function flush(path){running[path]=true;
+  while(pending[path]){const d=pending[path];delete pending[path];
+    try{await db.doc(path).set(d)}catch(e){
+      if(e&&e.code==="unavailable"){await new Promise(r=>setTimeout(r,600+Math.random()*800));try{await db.doc(path).set(d)}catch(e2){banner("Kaydedilemedi, bağlantını kontrol edip tekrar dene.")}}
+      else if(e&&e.code==="invalid_argument"){canWrite=false;banner("Bu sayfada değişiklik yapma iznin yok, sadece görüntülüyorsun.")}
+      else banner("Kaydedilemedi: "+(e&&e.message||"bilinmeyen hata"));
+    }}
+  running[path]=false}
+
+/* ---------- game ---------- */
+let msgT;function lcdMsg(m){S.msg=m;renderLCD();clearTimeout(msgT);msgT=setTimeout(()=>{S.msg="";renderLCD()},1800)}
+function applyXP(delta,date,p,anchor){
+  const st={...S.stats}, before=levelInfo(st.xp||0).L;
+  st.xp=Math.max(0,(st.xp||0)+delta);
+  const after=levelInfo(st.xp).L, i=DATES.indexOf(date);
+  let dayDone=false;
+  if(delta>0&&date<=TODAY&&pct(i,p)>=DAY_GOAL&&date>(st.lastFull||"")){
+    st.streak=st.lastFull===prevDay(date)?(st.streak||0)+1:1;
+    st.best=Math.max(st.best||0,st.streak);st.lastFull=date;dayDone=true;
+  }
+  S.stats=st;write("stats/me",st);
+  if(delta>0&&anchor)floatXP(anchor,"+"+delta+" XP");
+  if(after>before){notes(70);arp();bump();toast("LEVEL UP! "+pad2(after),"böyle devam, Ari")}
+  else if(dayDone){notes(55);arp();bump();toast("GÜN TAMAM ♥ "+pad2(st.streak),"seri büyüyor")}
+}
+function toggleItem(id,el){
+  const date=DATES[S.sel], p=JSON.parse(JSON.stringify(prog(date))), it=S.plan.items.find(x=>x.id===id);if(!it)return;
+  const c=CATS[it.c]||CATS.serbest, was=!!p.done[id];
+  if(was)delete p.done[id];else p.done[id]=true;
+  S.week[date]=p;write("progress/"+date,p);
+  const rect=el.querySelector(".pad").getBoundingClientRect();
+  if(!was){kick();blip(c.hz,.18,"square",.05,.02);burst(el.querySelector(".pad"));buzz();lcdMsg("+"+c.xp+" XP · "+c.label)}else unblip();
+  render();
+  applyXP(was?-c.xp:c.xp,date,p,was?null:rect);render();
+  if(!was&&it.c==="muzik"&&/^bitirme/i.test(it.t))setTimeout(()=>openBeat(null,true),900);
+}
+function useJoker(){
+  const date=DATES[S.sel], p=JSON.parse(JSON.stringify(prog(date)));
+  if(jokersLeft()<=0||date>TODAY||p.joker||pct(S.sel)>=DAY_GOAL)return;
+  if(!jokerArmed){jokerArmed=true;blip(660,.08);renderJoker();clearTimeout(jokerT);jokerT=setTimeout(()=>{jokerArmed=false;renderJoker()},4000);return}
+  jokerArmed=false;clearTimeout(jokerT);
+  p.joker=true;S.week[date]=p;write("progress/"+date,p);
+  const st={...S.stats}, j=st.joker&&st.joker.month===MONTH?{...st.joker}:{month:MONTH,used:0};
+  j.used=(j.used||0)+1;st.joker=j;
+  if(date>(st.lastFull||"")){st.streak=st.lastFull===prevDay(date)?(st.streak||0)+1:1;st.best=Math.max(st.best||0,st.streak);st.lastFull=date}
+  S.stats=st;write("stats/me",st);
+  arp();notes(40);toast("★ JOKER","seri korundu · kalan "+jokersLeft());render();
+}
+function addXP(n,rect,msg){applyXP(n,TODAY,prog(TODAY),rect||null);if(msg)lcdMsg(msg)}
+function setWater(k,el){
+  const date=DATES[S.sel], p=JSON.parse(JSON.stringify(prog(date))), old=p.water||0;
+  const nw=k<=old?k-1:k;if(nw===old)return;
+  p.water=nw;S.week[date]=p;write("progress/"+date,p);
+  let delta=(nw-old)*WATER_XP;
+  if(nw===WATER_N&&old<WATER_N)delta+=WATER_BONUS;
+  if(old===WATER_N&&nw<WATER_N)delta-=WATER_BONUS;
+  const rect=el.getBoundingClientRect();
+  if(nw>old){blip(520+nw*60,.12,"sine",.09);burst(el,["#7FC8FF","#E6F5FF","#fff"]);buzz();lcdMsg("SU "+(nw*0.5).toFixed(1)+"L")}else unblip();
+  render();
+  applyXP(delta,date,p,nw>old?rect:null);
+  if(nw===WATER_N&&old<WATER_N){toast("3 LİTRE ●","+"+WATER_BONUS+" XP BONUS");arp()}
+  renderLCD();renderSteps();
+}
+
+/* ---------- fx ---------- */
+const cv=$("fx"), cx=cv.getContext("2d");let parts=[], raf=0;
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+function size(){cv.width=innerWidth*devicePixelRatio;cv.height=innerHeight*devicePixelRatio}
+addEventListener("resize",size);size();
+const COLORS=["#B66BFF","#FF7FCB","#3FE0A1","#FFE066","#5CA8FF","#FFFFFF"];
+const GLYPHS=["♪","♫","■","●","♪"];
+function spawn(x,y,n,spread,colors,glyphs){for(let k=0;k<n;k++){const a=Math.random()*Math.PI*2,v=(Math.random()*.6+.4)*spread;
+  parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-spread*.55,s:Math.random()*10+12,c:colors[k%colors.length],g:glyphs?glyphs[k%glyphs.length]:"■",life:1,rot:Math.random()*6,vr:(Math.random()-.5)*.25})}
+  if(!raf)raf=requestAnimationFrame(tick)}
+function tick(){cx.clearRect(0,0,cv.width,cv.height);const dpr=devicePixelRatio;
+  parts=parts.filter(p=>p.life>0);
+  for(const p of parts){p.x+=p.vx;p.y+=p.vy;p.vy+=.33;p.vx*=.99;p.rot+=p.vr;p.life-=.013;
+    cx.save();cx.globalAlpha=Math.max(0,p.life);cx.translate(p.x*dpr,p.y*dpr);cx.rotate(p.rot);cx.fillStyle=p.c;
+    cx.font=`${p.s*dpr}px "Rubik Mono One",sans-serif`;cx.textAlign="center";cx.textBaseline="middle";cx.strokeStyle="#22163F";cx.lineWidth=2*dpr;cx.strokeText(p.g,0,0);cx.fillText(p.g,0,0);cx.restore()}
+  raf=parts.length?requestAnimationFrame(tick):0;if(!raf)cx.clearRect(0,0,cv.width,cv.height)}
+function notes(n){if(reduce)return;for(let k=0;k<4;k++)spawn(innerWidth*(.15+k*.23),innerHeight*.4,n/4,12,COLORS,GLYPHS)}
+function burst(el,cols){if(reduce||!el)return;const r=el.getBoundingClientRect();spawn(r.left+r.width/2,r.top+r.height/2,10,6,cols||COLORS,GLYPHS)}
+function floatXP(el,txt){if(!el)return;const r=el.getBoundingClientRect?el.getBoundingClientRect():el,f=document.createElement("div");f.className="float";f.textContent=txt;f.style.left=(r.left-30)+"px";f.style.top=(r.top-6)+"px";document.body.appendChild(f);setTimeout(()=>f.remove(),1000)}
+function bump(){if(reduce)return;const d=$("device");d.classList.remove("bump");void d.offsetWidth;d.classList.add("bump")}
+let tt;function toast(a,b){const t=$("toast");t.firstElementChild.innerHTML=esc(a)+(b?"<small>"+esc(b)+"</small>":"");t.classList.add("show");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("show"),2300)}
+function buzz(){try{navigator.vibrate&&navigator.vibrate(14)}catch(e){}}
+
+/* ---------- edit sheet ---------- */
+$("fDay").innerHTML=`<option value="-1">Her gün</option>`+DAYS.map((d,i)=>`<option value="${i}">${d}</option>`).join("");
+$("fCat").innerHTML=Object.entries(CATS).map(([k,c])=>`<option value="${k}">${c.label.charAt(0)+c.label.slice(1).toLocaleLowerCase("tr")}</option>`).join("");
+let delArmed=false;
+function openSheet(it){
+  S.editingId=it?it.id:null;delArmed=false;$("delBtn").textContent="SİL";
+  $("formTitle").textContent=it?"KANALI DÜZENLE":"YENİ KANAL";
+  $("delBtn").style.visibility=it?"visible":"hidden";
+  $("fTitle").value=it?it.t:"";$("fDay").value=String(it?it.d:S.sel);$("fCat").value=it?it.c:"muzik";
+  $("fStart").value=it?it.s:"18:00";$("fEnd").value=it?(it.e==="24:00"?"23:59":it.e):"19:00";$("fNote").value=it?(it.n||""):"";
+  $("scrim").classList.add("open");setTimeout(()=>$("fTitle").focus(),50);
+}
+function closeSheet(){$("scrim").classList.remove("open")}
+function savePlan(){S.plan.updated=new Date().toISOString();write("plan/tasks",S.plan);render()}
+$("form").addEventListener("submit",e=>{e.preventDefault();if(!S.plan)S.plan={items:[]};
+  let end=$("fEnd").value;if(end==="23:59")end="24:00";
+  const data={d:Number($("fDay").value),s:$("fStart").value,e:end,t:$("fTitle").value.trim(),c:$("fCat").value,n:$("fNote").value.trim()};
+  if(!data.t)return;
+  const wasEdit=!!S.editingId;
+  if(wasEdit){const it=S.plan.items.find(x=>x.id===S.editingId);Object.assign(it,data)}
+  else S.plan.items.push({id:"u"+Date.now().toString(36),...data});
+  closeSheet();savePlan();blip(392,.12);toast(wasEdit?"KAYDEDİLDİ":"KANAL EKLENDİ");
+});
+$("delBtn").addEventListener("click",()=>{if(!delArmed){delArmed=true;$("delBtn").textContent="EMİN MİSİN?";return}
+  S.plan.items=S.plan.items.filter(x=>x.id!==S.editingId);closeSheet();savePlan();unblip();toast("SİLİNDİ")});
+$("cancelBtn").addEventListener("click",closeSheet);
+$("scrim").addEventListener("click",e=>{if(e.target===$("scrim"))closeSheet()});
+
+/* ---------- beat vault & outreach forms ---------- */
+async function del(path){if(!db||!canWrite)return;try{await db.doc(path).delete()}catch(e){banner("Silinemedi: "+(e&&e.message||"bilinmeyen hata"))}}
+function armDelete(btn,fn){if(btn.dataset.armed!=="1"){btn.dataset.armed="1";btn.textContent="EMİN MİSİN?";return}fn()}
+let beatEditing=null, sendEditing=null;
+function openBeat(b,fromSession){
+  beatEditing=b?b.id:null;const d=$("bDel");d.dataset.armed="";d.textContent="SİL";d.style.visibility=b?"visible":"hidden";
+  $("beatTitle").textContent=b?"BEAT'İ DÜZENLE":fromSession?"BEAT BİTTİ Mİ? ♪":"YENİ BEAT";
+  $("bCancel").textContent=fromSession&&!b?"HENÜZ DEĞİL":"VAZGEÇ";
+  $("bName").value=b?b.name:"";$("bBpm").value=b&&b.bpm?b.bpm:"";$("bKey").value=b?b.key||"":"";
+  $("bDate").value=b?b.date:(DATES[S.sel]<=TODAY?DATES[S.sel]:TODAY);$("bLink").value=b?b.link||"":"";$("bNote").value=b?b.note||"":"";
+  $("beatScrim").classList.add("open");setTimeout(()=>$("bName").focus(),50);
+}
+$("beatForm").addEventListener("submit",e=>{e.preventDefault();
+  const link=$("bLink").value.trim();
+  if(link&&!safeLink(link)){banner("Link https:// ile başlamalı. Drive ya da Dropbox'tan 'Bağlantıyı kopyala' ile al.");return}
+  banner("");
+  const data={name:$("bName").value.trim(),bpm:$("bBpm").value?Number($("bBpm").value):null,key:$("bKey").value.trim(),date:$("bDate").value,link,note:$("bNote").value.trim()};
+  if(!data.name||!data.date)return;
+  if(beatEditing){const old=S.beats.find(x=>x.id===beatEditing)||{};const b={...old,...data};S.beats=S.beats.map(x=>x.id===b.id?b:x);write("beats/"+b.id,b);toast("KAYDEDİLDİ")}
+  else{const b={id:"b"+Date.now().toString(36),created:Date.now(),...data};S.beats=[...S.beats,b];write("beats/"+b.id,b);
+    kick();arp();notes(50);bump();addXP(XP_BEAT,null,"KASAYA GİRDİ +"+XP_BEAT+" XP");toast("KASAYA GİRDİ ♪","bu hafta "+beatsThisWeek()+"/"+BEAT_GOAL)}
+  $("beatScrim").classList.remove("open");render();
+});
+$("bDel").addEventListener("click",()=>armDelete($("bDel"),()=>{const id=beatEditing;S.beats=S.beats.filter(x=>x.id!==id);del("beats/"+id);$("beatScrim").classList.remove("open");unblip();toast("SİLİNDİ");render()}));
+$("bCancel").addEventListener("click",()=>$("beatScrim").classList.remove("open"));
+$("beatScrim").addEventListener("click",e=>{if(e.target===$("beatScrim"))$("beatScrim").classList.remove("open")});
+$("addBeat").addEventListener("click",()=>openBeat(null,false));
+$("tapes").addEventListener("click",e=>{const b=e.target.closest("[data-beat]");if(!b)return;openBeat(S.beats.find(x=>x.id===b.dataset.beat),false)});
+
+function openSend(s){
+  sendEditing=s?s.id:null;const d=$("sDel");d.dataset.armed="";d.textContent="SİL";d.style.visibility=s?"visible":"hidden";
+  $("sendTitle").textContent=s?"GÖNDERİMİ DÜZENLE":"YENİ GÖNDERİM";
+  $("beatNames").innerHTML=S.beats.map(b=>`<option value="${esc(b.name)}"></option>`).join("")+`<option value="Loop / melodi paketi"></option>`;
+  $("sTo").value=s?s.to:"";$("sPlat").value=s?s.plat||"Instagram":"Instagram";$("sDate").value=s?s.date:TODAY;
+  $("sWhat").value=s?s.what||"":"";$("sStatus").value=s?s.status||"bekliyor":"bekliyor";$("sNote").value=s?s.note||"":"";
+  $("sendScrim").classList.add("open");setTimeout(()=>$("sTo").focus(),50);
+}
+function saveSend(s){S.sends=S.sends.some(x=>x.id===s.id)?S.sends.map(x=>x.id===s.id?s:x):[...S.sends,s];write("sends/"+s.id,s)}
+$("sendForm").addEventListener("submit",e=>{e.preventDefault();
+  const data={to:$("sTo").value.trim(),plat:$("sPlat").value,date:$("sDate").value,what:$("sWhat").value.trim(),status:$("sStatus").value,note:$("sNote").value.trim()};
+  if(!data.to||!data.date)return;
+  if(sendEditing){const old=S.sends.find(x=>x.id===sendEditing)||{};const s={...old,...data};
+    if(old.status!=="olumlu"&&s.status==="olumlu"){arp();notes(60);toast("OLUMLU CEVAP ♥","işte placement yolu")}else toast("KAYDEDİLDİ");saveSend(s)}
+  else{const s={id:"s"+Date.now().toString(36),created:Date.now(),last:data.date,follow:0,...data};saveSend(s);
+    kick();blip(392,.15);addXP(XP_SEND,null,"GÖNDERİLDİ +"+XP_SEND+" XP");toast("GÖNDERİLDİ ✉","bu hafta "+sendsThisWeek()+"/"+SEND_GOAL)}
+  $("sendScrim").classList.remove("open");render();
+});
+$("sDel").addEventListener("click",()=>armDelete($("sDel"),()=>{const id=sendEditing;S.sends=S.sends.filter(x=>x.id!==id);del("sends/"+id);$("sendScrim").classList.remove("open");unblip();toast("SİLİNDİ");render()}));
+$("sCancel").addEventListener("click",()=>$("sendScrim").classList.remove("open"));
+$("sendScrim").addEventListener("click",e=>{if(e.target===$("sendScrim"))$("sendScrim").classList.remove("open")});
+$("addSend").addEventListener("click",()=>openSend(null));
+$("sends").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+  const id=b.dataset.follow||b.dataset.reply||b.dataset.send, s=S.sends.find(x=>x.id===id);if(!s)return;
+  if(b.dataset.send){openSend(s);return}
+  if(b.dataset.reply){const n={...s,status:"cevap"};saveSend(n);blip(523,.12);toast("CEVAP GELDİ","durumu düzenle'den güncelleyebilirsin");render();return}
+  if(b.dataset.follow){const rect=b.getBoundingClientRect();const n={...s,last:TODAY,follow:(s.follow||0)+1};saveSend(n);kick();addXP(XP_FOLLOW,rect,"TAKİP +"+XP_FOLLOW+" XP");render()}
+});
+
+/* ---------- events ---------- */
+document.querySelector(".dock").addEventListener("click",e=>{const t=e.target.closest(".tab");if(!t)return;S.scr=t.dataset.scr;S.msg="";blip(t.dataset.scr==="today"?330:t.dataset.scr==="kasa"?392:440,.07,"square",.04);render();scrollTo({top:0,behavior:reduce?"auto":"smooth"})});
+$("jokerBtn").addEventListener("click",useJoker);
+$("steps").addEventListener("click",e=>{const b=e.target.closest(".key");if(!b)return;S.sel=Number(b.dataset.i);blip(330+S.sel*30,.07,"square",.04);render();scrollNow()});
+$("water").addEventListener("click",e=>{const b=e.target.closest(".wpad");if(!b||!S.loaded)return;setWater(Number(b.dataset.k),b)});
+$("list").addEventListener("click",e=>{const b=e.target.closest(".ch");if(!b)return;const id=b.dataset.id;
+  if(S.edit){openSheet(S.plan.items.find(x=>x.id===id));return}toggleItem(id,b)});
+$("editBtn").addEventListener("click",()=>{S.edit=!S.edit;blip(S.edit?660:440,.08);render()});
+$("addBtn").addEventListener("click",()=>openSheet(null));
+$("mute").addEventListener("click",()=>{soundOn=!soundOn;try{localStorage.setItem("sylwa-sound",soundOn?"on":"off")}catch(e){}if(soundOn)blip(523,.1);render()});
+function scrollNow(){if(S.sel!==todayIdx)return;const n=document.querySelector(".ch.live");if(n)n.scrollIntoView({block:"center",behavior:reduce?"auto":"smooth"})}
+setInterval(()=>{if(S.loaded&&S.sel===todayIdx&&!S.edit)renderList()},60000);
+
+/* ---------- data ---------- */
+render();
+/* Firebase adapter (module script below) calls this after login with a db that mimics the old claude db API. */
+window.ARI_START=function(adapter){
+  if(db)return;
+  db=adapter;
+  let timer=setTimeout(()=>{if(!S.loaded)banner("Veriler henüz yüklenemedi, bağlantını kontrol et.")},10000);
+  let first=true;
+  db.doc("plan/tasks").onSnapshot(s=>{
+    if(!s.metadata.fromCache){clearTimeout(timer);banner("")}
+    S.plan=s.exists?JSON.parse(JSON.stringify(s.data())):null;
+    if(!S.plan||!Array.isArray(S.plan.items))S.plan={items:[]};
+    S.loaded=true;render();if(first){first=false;setTimeout(scrollNow,250)}
+  },e=>{clearTimeout(timer);banner("Program okunamadı ("+e.code+").");S.loaded=true;render()});
+  db.doc("stats/me").onSnapshot(s=>{if(s.exists)S.stats={xp:0,streak:0,best:0,lastFull:"",...JSON.parse(JSON.stringify(s.data()))};render()},()=>{});
+  db.collection("progress").where("week","==",WEEK).onSnapshot(q=>{
+    const w={};q.docs.forEach(d=>{const v=d.data();if(v&&v.date)w[v.date]={...v,done:{...(v.done||{})}}});
+    S.week=w;if(S.loaded)render();
+  },()=>{});
+  db.collection("beats").onSnapshot(q=>{S.beats=q.docs.map(d=>({...d.data(),id:d.id}));render()},e=>banner("Kasa okunamadı ("+e.code+")."));
+  db.collection("sends").onSnapshot(q=>{S.sends=q.docs.map(d=>({...d.data(),id:d.id}));render()},e=>banner("Gönderimler okunamadı ("+e.code+")."));
+};
+</script>
+<script type="module">
+import {firebaseConfig} from "./firebase-config.js";
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {initializeAuth,browserLocalPersistence,onAuthStateChanged,signInWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,doc,collection,query,where,setDoc,deleteDoc,getDoc,onSnapshot,writeBatch} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const $=id=>document.getElementById(id);
+const gateMsg=t=>{$("gateMsg").textContent="▶ "+t};
+
+if("serviceWorker" in navigator){navigator.serviceWorker.register("./sw.js").catch(()=>{})}
+
+if(!firebaseConfig||!firebaseConfig.apiKey||/BURAYA/.test(firebaseConfig.apiKey)){
+  gateMsg("AYAR EKSİK: firebase-config.js");
+  throw new Error("firebase-config.js doldurulmamış");
+}
+
+const app=initializeApp(firebaseConfig);
+const auth=initializeAuth(app,{persistence:browserLocalPersistence});
+const fs=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})});
+
+/* ---- adapter: same API the app used with claude.use("db"), paths prefixed with users/{uid}/ ---- */
+function makeDb(uid){
+  const base="users/"+uid+"/";
+  const wrapDoc=s=>({id:s.id,exists:s.exists(),data:()=>s.data(),metadata:s.metadata});
+  const wrapQuery=q=>({docs:q.docs.map(wrapDoc),size:q.size,empty:q.empty,metadata:q.metadata});
+  const listen=(ref,wrap)=>(next,err)=>onSnapshot(ref,s=>next(wrap(s)),e=>{if(err)err(e)});
+  /* Offline, Firestore keeps the write locally and only resolves once the server confirms.
+     Resolve after a short wait so the app keeps saving; report errors that come later. */
+  const soft=p=>{p.catch(e=>{if(window.banner)window.banner("Kaydedilemedi: "+(e&&e.code||e&&e.message||"bilinmeyen hata"))});
+    return Promise.race([p,new Promise(r=>setTimeout(r,1500))])};
+  const query_=q=>({onSnapshot:listen(q,wrapQuery)});
+  return{
+    doc(path){const r=doc(fs,base+path);return{set:d=>soft(setDoc(r,d)),delete:()=>soft(deleteDoc(r)),onSnapshot:listen(r,wrapDoc)}},
+    collection(path){const c=collection(fs,base+path);return{...query_(c),where:(f,op,v)=>query_(query(c,where(f,op,v)))}}
+  };
+}
+
+/* ---- import from the export .json ---- */
+async function importJSON(uid,j){
+  if(!j||!j.plan||!Array.isArray(j.plan.items))throw new Error("Dosyada plan bulunamadı");
+  const base="users/"+uid+"/", clean=v=>JSON.parse(JSON.stringify(v)), okId=s=>typeof s==="string"&&/^[^/]{1,200}$/.test(s);
+  const ops=[[base+"plan/tasks",clean(j.plan)]];
+  if(j.stats&&typeof j.stats==="object")ops.push([base+"stats/me",clean(j.stats)]);
+  for(const [date,v] of Object.entries(j.progress||{}))if(/^\d{4}-\d{2}-\d{2}$/.test(date)&&v)ops.push([base+"progress/"+date,clean(v)]);
+  for(const b of (Array.isArray(j.beats)?j.beats:[]))if(b&&okId(b.id))ops.push([base+"beats/"+b.id,clean(b)]);
+  for(const s of (Array.isArray(j.sends)?j.sends:[]))if(s&&okId(s.id))ops.push([base+"sends/"+s.id,clean(s)]);
+  for(let i=0;i<ops.length;i+=400){const b=writeBatch(fs);ops.slice(i,i+400).forEach(([p,d])=>b.set(doc(fs,p),d));await b.commit()}
+  return ops.length;
+}
+
+function openApp(uid){
+  $("gate").hidden=true;document.body.classList.remove("locked");
+  window.ARI_START(makeDb(uid));
+}
+
+function askImport(uid){
+  $("loginForm").hidden=true;$("importBtn").hidden=false;$("importNote").hidden=false;
+  gateMsg("VERİ YOK");
+  $("importBtn").onclick=()=>$("importFile").click();
+  $("importFile").onchange=async()=>{
+    const f=$("importFile").files[0];if(!f)return;
+    gateMsg("İÇE AKTARILIYOR...");$("importBtn").hidden=true;
+    try{const n=await importJSON(uid,JSON.parse(await f.text()));gateMsg("TAMAM · "+n+" KAYIT");setTimeout(()=>openApp(uid),700)}
+    catch(e){gateMsg("HATA: "+(e&&(e.code||e.message)||"dosya okunamadı"));$("importBtn").hidden=false}
+    $("importFile").value="";
+  };
+}
+
+let started=false;
+onAuthStateChanged(auth,async user=>{
+  if(!user){
+    if(started){location.reload();return}
+    $("loginForm").hidden=false;$("importBtn").hidden=true;$("importNote").hidden=true;gateMsg("E-POSTA VE ŞİFRE");return;
+  }
+  if(started)return;started=true;
+  gateMsg("YÜKLENİYOR...");$("loginForm").hidden=true;
+  try{
+    const s=await getDoc(doc(fs,"users/"+user.uid+"/plan/tasks"));
+    if(!s.exists()&&!s.metadata.fromCache){askImport(user.uid);return}
+  }catch(e){/* offline with no cache: open the app anyway */}
+  openApp(user.uid);
+});
+
+const AUTH_ERR={"auth/invalid-credential":"E-POSTA YA DA ŞİFRE YANLIŞ","auth/wrong-password":"E-POSTA YA DA ŞİFRE YANLIŞ","auth/user-not-found":"E-POSTA YA DA ŞİFRE YANLIŞ",
+  "auth/invalid-email":"E-POSTA GEÇERSİZ","auth/network-request-failed":"İNTERNET YOK","auth/too-many-requests":"ÇOK DENEME · BİRAZ BEKLE",
+  "auth/unauthorized-domain":"BU ADRES FIREBASE'DE İZİNLİ DEĞİL","auth/operation-not-allowed":"E-POSTA GİRİŞİ KAPALI"};
+$("loginForm").addEventListener("submit",async e=>{
+  e.preventDefault();$("lBtn").disabled=true;gateMsg("GİRİŞ YAPILIYOR...");
+  try{await signInWithEmailAndPassword(auth,$("lEmail").value.trim(),$("lPass").value)}
+  catch(err){gateMsg(AUTH_ERR[err&&err.code]||("HATA: "+(err&&err.code||"bilinmeyen")))}
+  $("lBtn").disabled=false;$("lPass").value="";
+});
+
+let outArmed=false,outT;
+$("logout").addEventListener("click",async()=>{
+  if(!outArmed){outArmed=true;$("logout").textContent="EMİN MİSİN?";clearTimeout(outT);outT=setTimeout(()=>{outArmed=false;$("logout").textContent="ÇIKIŞ"},3000);return}
+  await signOut(auth);location.reload();
+});
+</script>
+</body>
+</html>
