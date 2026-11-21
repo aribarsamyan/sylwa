@@ -34,7 +34,8 @@
   color-scheme:light;
 }
 *{box-sizing:border-box}
-html,body{margin:0;height:100%}
+html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none}
+#appScroll,.gate{position:fixed;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
 body{background:
   radial-gradient(circle at 20% 10%,#3B2A63 0,transparent 40%),
   radial-gradient(circle at 90% 80%,#4A2D5E 0,transparent 45%),#1A1230;
@@ -72,6 +73,16 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 .lcd .dim{color:var(--lcd-dim)}
 .lcd .blocks{letter-spacing:-1px}
 .lcd .msg{min-height:22px}
+.lcd .lg{display:grid;gap:0 12px}
+.lcd .lg.c2{grid-template-columns:1fr 1fr}
+.lcd .lg.c3{grid-template-columns:1fr 1fr 1fr}
+.lcd .sep{border-top:1px dashed rgba(31,42,20,.28);margin-top:6px;padding-top:5px}
+.lcd .cell{display:flex;flex-direction:column;min-width:0}
+.lcd .cell+.cell{border-left:1px dashed rgba(31,42,20,.28);padding-left:10px}
+.lcd .k{font-size:15px;line-height:1;color:var(--lcd-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lcd .v{font-size:24px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lcd .big .v{font-size:40px;line-height:.95}
+.lcd .v small{font-size:20px}
 
 /* step buttons (days) */
 .steps{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}
@@ -158,6 +169,10 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 .hw.sm{font-size:10px;padding:10px 12px}
 .joker{display:flex;align-items:center;gap:10px}
 .joker .hw{white-space:nowrap;flex-shrink:0}
+.lblrow{display:flex;align-items:center;gap:10px}
+.lblrow .lbl{flex:1;min-width:0}
+.jkbtn{flex-shrink:0;white-space:nowrap;font-size:9px;padding:8px 10px}
+.jkbtn[hidden]{display:none}
 .joker .hint{font-size:12px;color:#43346E;font-weight:600;line-height:1.3}
 .hw.star{background:linear-gradient(180deg,#FFF3B8,var(--c-planlama));box-shadow:0 5px 0 #B8962A,0 6px 0 #120B24}
 .hw.armed{background:var(--rec);color:#fff;box-shadow:0 5px 0 #A3243B,0 6px 0 #120B24;animation:blink 1s steps(2) infinite}
@@ -295,7 +310,7 @@ body.locked>.wrap,body.locked>.dock{display:none}
 </div>
 </div>
 <canvas id="fx"></canvas>
-<div class="wrap">
+<div class="wrap" id="appScroll">
 <main class="device" id="device">
   <i class="screw s1"></i><i class="screw s2"></i><i class="screw s3"></i><i class="screw s4"></i>
   <div class="brand">
@@ -310,10 +325,9 @@ body.locked>.wrap,body.locked>.dock{display:none}
   <div class="banner" id="banner" role="status"></div>
   <section class="scr" id="scrToday">
     <nav class="steps" id="steps" aria-label="Günler"></nav>
-    <div class="joker"><button class="hw sm star" id="jokerBtn" type="button">★ JOKER ×2</button><span class="hint" id="jokerHint">Kötü gün mü? Joker kullan, serin bozulmasın. Ayda 2 hak.</span></div>
     <div class="lbl">SU KANALI · DAMLA BAŞI 500 ML</div>
     <section class="water" id="water" aria-label="Su takibi"></section>
-    <div class="lbl" id="chLbl">KANALLAR</div>
+    <div class="lblrow"><div class="lbl" id="chLbl">KANALLAR</div><button class="hw sm star jkbtn" id="jokerBtn" type="button">★ JOKER</button></div>
     <section class="chs" id="list"></section>
     <div class="tools">
       <button class="hw sm" id="editBtn" type="button"><span class="dot"></span><span id="editTxt">REC · DÜZENLE</span></button>
@@ -328,7 +342,7 @@ body.locked>.wrap,body.locked>.dock{display:none}
     <section class="tapes" id="tapes"></section>
   </section>
   <section class="scr" id="scrLoop" hidden>
-    <div class="lbl">LOOP KASASI · COLLAB</div>
+    <div class="lbl">LOOP KASASI</div>
     <div class="tools"><button class="hw sm go" id="addLoop" type="button">＋ LOOP EKLE</button></div>
     <section class="tapes" id="loopTapes"></section>
   </section>
@@ -346,7 +360,7 @@ body.locked>.wrap,body.locked>.dock{display:none}
         <button class="tbtn" id="notePin" type="button" aria-pressed="false">📌</button>
         <button class="tbtn" id="noteDel" type="button">🗑</button>
       </div>
-      <textarea class="paper" id="noteText" placeholder="Yazmaya başla…&#10;İlk satır notun başlığı olur." aria-label="Not"></textarea>
+      <textarea class="paper" id="noteText" placeholder="Not" aria-label="Not"></textarea>
     </div>
   </section>
   <section class="scr" id="scrSend" hidden>
@@ -439,7 +453,7 @@ body.locked>.wrap,body.locked>.dock{display:none}
       <label class="field" for="nQe">SESSİZ · BİTİŞ<input id="nQe" type="time" required></label>
     </div>
     <button class="btn wide" id="nTest" type="button">TEST BİLDİRİMİ</button>
-    <p class="nnote">iPhone'da bildirimler sadece ana ekrana eklenmiş SYLWA'da ve iOS 16.4 ya da üstünde çalışır. Saatler New York saatine göre. Bildirimler birkaç dakika, yoğun saatlerde 10–20 dakika gecikebilir; test bildirimi 15 dakikaya kadar sürebilir.</p>
+    
     <div class="acts">
       <span style="flex:1"></span>
       <button class="btn" id="nCancel" type="button">VAZGEÇ</button>
@@ -475,7 +489,7 @@ const DATES=[...Array(7)].map((_,i)=>iso(new Date(monday.getFullYear(),monday.ge
 const WEEK=DATES[0], TODAY=DATES[todayIdx];
 function prevDay(s){const [y,m,d]=s.split("-").map(Number);return iso(new Date(y,m-1,d-1))}
 
-const S={plan:null,stats:{xp:0,streak:0,best:0,lastFull:""},week:{},sel:todayIdx,edit:false,loaded:false,editingId:null,msg:"",scr:"today",beats:[],sends:[],loops:[],notes:[],noteId:null,noteQ:""};
+const S={plan:null,stats:{xp:0,streak:0,best:0,lastFull:""},week:{},sel:todayIdx,edit:false,loaded:false,editingId:null,msg:"",scr:"today",beats:[],sends:[],loops:[],notes:[],noteId:null,noteQ:"",prevWeek:{}};
 const MONTH=TODAY.slice(0,7);
 let jokerArmed=false, jokerT;
 function daysSince(d){if(!d)return 0;const [y,m,dd]=d.split("-").map(Number);return Math.round((new Date(now.getFullYear(),now.getMonth(),now.getDate())-new Date(y,m-1,dd))/864e5)}
@@ -488,7 +502,21 @@ function safeLink(u){return /^https:\/\/[^\s"'<>]+$/i.test(u||"")?u:""}
 let db=null, canWrite=true, soundOn=true;
 try{soundOn=localStorage.getItem("sylwa-sound")!=="off"}catch(e){}
 
-function levelInfo(xp){let L=1,need=100,acc=0;while(xp>=acc+need){acc+=need;L++;need=100+(L-1)*25}return{L,into:xp-acc,need}}
+function mins(it){const t=x=>{const[h,m]=String(x).split(":").map(Number);return h*60+(m||0)};return Math.max(0,t(it.e)-t(it.s))}
+function hrs(m){const h=m/60;return (Math.round(h*2)/2).toString().replace(".",",")}
+function dayIdxOf(date){const[y,m,d]=date.split("-").map(Number);return(new Date(y,m-1,d).getDay()+6)%7}
+function firstDay(){const all=[...Object.keys(S.week),...Object.keys(S.prevWeek)].sort();return all[0]||null}
+function progAny(date){return S.week[date]||S.prevWeek[date]||{date,done:{},water:0}}
+/* 1. music hours this week: done vs planned */
+function musicWeek(){let plan=0,done=0;DATES.forEach((date,i)=>{const p=prog(date);itemsFor(i).forEach(it=>{if(it.c!=="muzik")return;const m=mins(it);plan+=m;if(p.done[it.id])done+=m})});return{plan,done}}
+/* 2. placement funnel */
+function funnel(){const n=S.sends.length,rep=S.sends.filter(x=>x.status&&x.status!=="bekliyor").length,ok=S.sends.filter(x=>x.status==="olumlu").length;return{n,rep,ok,rate:n?Math.round(rep/n*100):0}}
+/* 4. most skipped category over the last 7 finished days (joker days excluded) */
+const SKIP_CATS={muzik:"MÜZİK",spor:"SPOR",ingilizce:"İNGİLİZCE",ev:"EV İŞİ",planlama:"PLAN",takviye:"TAKVİYE"};
+function mostSkipped(){const tally={};for(let k=1;k<=7;k++){const date=(()=>{let d=TODAY;for(let j=0;j<k;j++)d=prevDay(d);return d})();
+    if(!firstDay()||date<firstDay())continue;const p=progAny(date);if(p.joker)continue;const i=dayIdxOf(date);
+    itemsFor(i).forEach(it=>{if(!SKIP_CATS[it.c])return;const t=tally[it.c]||(tally[it.c]={plan:0,done:0});t.plan++;if(p.done&&p.done[it.id])t.done++})}
+  let best=null;Object.entries(tally).forEach(([c,t])=>{if(t.plan<2)return;const miss=1-t.done/t.plan;if(miss>0&&(!best||miss>best.miss))best={c,miss,...t}});return best}
 function itemsFor(i){if(!S.plan)return[];return S.plan.items.filter(it=>it.d===i||it.d===-1).slice().sort((a,b)=>a.s.localeCompare(b.s)||a.e.localeCompare(b.e))}
 function prog(date){return S.week[date]||{date,week:WEEK,done:{},water:0}}
 function pct(i,p){p=p||prog(DATES[i]);if(p.joker)return 1;const its=itemsFor(i);const done=its.filter(it=>p.done&&p.done[it.id]).length;return(done+(p.water||0)/WATER_N)/(its.length+1)}
@@ -498,52 +526,41 @@ function banner(msg){const b=$("banner");b.textContent=msg||"";b.classList.toggl
 const pad2=n=>String(n).padStart(2,"0");
 
 /* ---------- render ---------- */
+/* LCD: every figure is a small dim label over its value, laid out on a fixed grid */
+function cell(k,v,cls){return `<div class="cell${cls?" "+cls:""}"><span class="k">${k}</span><span class="v">${v}</span></div>`}
 function renderLCD(){
-  const st=S.stats, li=levelInfo(st.xp||0), cells=Math.round(li.into/li.need*10);
+  const st=S.stats;
   const alive=st.lastFull===TODAY||st.lastFull===prevDay(TODAY), streak=alive?(st.streak||0):0;
-  const bar=`<span class="blocks">${"■".repeat(cells)}<span class="dim">${"□".repeat(10-cells)}</span></span>`;
-  let html;
+  const fn=funnel();
+  let rows, msg;
   if(S.scr==="kasa"){
-    const n=S.beats.length, w=beatsThisWeek();
-    html=`<div class="r"><span>KASA</span><span>BU HAFTA ${w}/${BEAT_GOAL} ${w>=BEAT_GOAL?"♥":""}</span></div>
-      <div class="r"><span class="big">${pad2(n)}</span><span>BEAT<br><span style="font-size:18px">LV ${pad2(li.L)} · ${st.xp||0} XP</span></span></div>
-      <div class="r msg"><span>▶ ${esc(S.msg||"YENİ BEAT +"+XP_BEAT+" XP")}</span></div>`;
+    rows=`<div class="lg c2">${cell("KASADA",pad2(S.beats.length),"big")}${cell("BU HAFTA",beatsThisWeek()+"/"+BEAT_GOAL,"big")}</div>`;msg=S.msg||"BEAT KASASI";
   }else if(S.scr==="loop"){
-    const n=S.loops.length, w=loopsThisWeek();
-    html=`<div class="r"><span>LOOP</span><span>BU HAFTA ${pad2(w)}</span></div>
-      <div class="r"><span class="big">${pad2(n)}</span><span>LOOP<br><span style="font-size:18px">COLLAB İÇİN HAZIR</span></span></div>
-      <div class="r msg"><span>▶ ${esc(S.msg||"YENİ LOOP +"+XP_LOOP+" XP")}</span></div>`;
+    rows=`<div class="lg c2">${cell("KASADA",pad2(S.loops.length),"big")}${cell("BU HAFTA",pad2(loopsThisWeek()),"big")}</div>`;msg=S.msg||"LOOP KASASI";
   }else if(S.scr==="note"){
-    const n=S.notes.length, last=S.notes.reduce((a,x)=>Math.max(a,x.updated||0),0);
-    html=`<div class="r"><span>NOT</span><span>${S.noteId?"DÜZENLENİYOR":"LİSTE"}</span></div>
-      <div class="r"><span class="big">${pad2(n)}</span><span>NOT<br><span style="font-size:18px">SON: ${last?noteWhen(last):"—"}</span></span></div>
-      <div class="r msg"><span>▶ ${esc(S.msg||"YAZDIKÇA KAYDEDİLİR")}</span></div>`;
+    const last=S.notes.reduce((a,x)=>Math.max(a,x.updated||0),0);
+    rows=`<div class="lg c2">${cell("NOT",pad2(S.notes.length),"big")}${cell("SON",last?noteWhen(last):"—","big")}</div>`;msg=S.msg||(S.noteId?"DÜZENLENİYOR":"NOTLAR");
   }else if(S.scr==="send"){
-    const n=S.sends.length, w=sendsThisWeek(), wait=S.sends.filter(s=>s.status==="bekliyor").length, due=S.sends.filter(sendDue).length;
-    html=`<div class="r"><span>GÖNDERİM</span><span>BU HAFTA ${w}/${SEND_GOAL} ${w>=SEND_GOAL?"♥":""}</span></div>
-      <div class="r"><span class="big">${pad2(n)}</span><span>BEKLEYEN ${pad2(wait)}<br><span style="font-size:18px">${due?"TEKRAR YAZ: "+due+" KİŞİ":"TAKİP GEREKEN YOK"}</span></span></div>
-      <div class="r msg"><span>▶ ${esc(S.msg||"YOLLA +"+XP_SEND+" · TAKİP +"+XP_FOLLOW)}</span></div>`;
+    const due=S.sends.filter(sendDue).length;
+    rows=`<div class="lg c3">${cell("TOPLAM",pad2(fn.n),"big")}${cell("CEVAP","%"+fn.rate,"big")}${cell("OLUMLU",pad2(fn.ok),"big")}</div>
+      <div class="lg c2 sep">${cell("BU HAFTA",sendsThisWeek()+"/"+SEND_GOAL)}${cell("TEKRAR YAZ",due?due+" KİŞİ":"—")}</div>`;msg=S.msg||"GÖNDERİM";
   }else{
     const i=S.sel, its=itemsFor(i), p=prog(DATES[i]), done=its.filter(it=>p.done[it.id]).length;
-    const msg=S.msg||(!S.loaded?"YÜKLENİYOR...":p.joker?`${SHORT[i]} ${DATES[i].slice(8)} · ★ JOKER GÜNÜ`:`${SHORT[i]} ${DATES[i].slice(8)} · ${done}/${its.length} · %${Math.round(Math.min(1,pct(i))*100)}`);
-    html=`<div class="r"><span>LV</span><span>SERİ ${streak?"♥":"·"} ${pad2(streak)} GÜN</span></div>
-      <div class="r"><span class="big">${pad2(li.L)}</span><span>${bar}<br><span style="font-size:18px">${li.into}/${li.need} XP · EN İYİ ${pad2(st.best||0)}</span></span></div>
-      <div class="r"><span>BEAT ${beatsThisWeek()}/${BEAT_GOAL}</span><span>JOKER ${"★".repeat(jokersLeft())}${"☆".repeat(JOKERS-jokersLeft())}</span></div>
-      <div class="r msg"><span>▶ ${esc(msg)}</span></div>`;
+    const mw=musicWeek(), sk=mostSkipped();
+    rows=`<div class="lg c2">${cell("MÜZİK · HAFTA",hrs(mw.done)+`<small>/${hrs(mw.plan)} SA</small>`,"big")}${cell("SERİ",pad2(streak)+`<small> GÜN</small>`,"big")}</div>
+      <div class="lg c3 sep">${cell("GÖNDER",fn.n)}${cell("CEVAP","%"+fn.rate)}${cell("OLUMLU",fn.ok)}</div>
+      <div class="lg c2 sep">${cell(sk?"ATLANAN · "+sk.done+"/"+sk.plan:"ATLANAN",sk?SKIP_CATS[sk.c]:"—")}${cell("JOKER","★".repeat(jokersLeft())+"☆".repeat(JOKERS-jokersLeft()))}</div>`;
+    msg=S.msg||(!S.loaded?"YÜKLENİYOR...":p.joker?`${SHORT[i]} ${DATES[i].slice(8)} · ★ JOKER`:`${SHORT[i]} ${DATES[i].slice(8)} · ${done}/${its.length} · %${Math.round(Math.min(1,pct(i))*100)}`);
   }
-  $("lcd").innerHTML=html;
+  $("lcd").innerHTML=rows+`<div class="r msg sep"><span>▶ ${esc(msg)}</span></div>`;
 }
 function renderJoker(){
   const left=jokersLeft(), date=DATES[S.sel], p=prog(date), b=$("jokerBtn");
   const usable=left>0&&date<=TODAY&&!p.joker&&pct(S.sel)<DAY_GOAL;
   b.disabled=!usable&&!p.joker;
   b.classList.toggle("armed",jokerArmed&&usable);
-  b.textContent=p.joker?"★ JOKER KULLANILDI":jokerArmed&&usable?"EMİN MİSİN?":"★ JOKER ×"+left;
-  $("jokerHint").textContent=p.joker?"Bu gün serini korudun. Yarın kaldığın yerden devam.":
-    date>TODAY?"Joker sadece bugün ya da geçmiş günler için kullanılır.":
-    left===0?"Bu ayın jokerleri bitti. Ayın 1'inde yenilenir.":
-    pct(S.sel)>=DAY_GOAL?"Bu günü zaten tamamladın, jokere gerek yok.":
-    "Kötü gün mü? Joker kullan, serin bozulmasın. Ayda "+JOKERS+" hak.";
+  b.textContent=p.joker?"★ KULLANILDI":jokerArmed&&usable?"EMİN MİSİN?":"★ JOKER ×"+left;
+  b.hidden=!p.joker&&!usable;
 }
 function tapeHTML(b,kind){const link=safeLink(b.link), isLoop=kind==="loop";
   return `<article class="tape${isLoop?" loop":""}"><div class="label"><div class="nm">${isLoop?'<span class="kind">LOOP</span>':""}${esc(b.name)}</div>
@@ -552,11 +569,11 @@ function tapeHTML(b,kind){const link=safeLink(b.link), isLoop=kind==="loop";
     <div class="win"><span class="reel"></span><span class="acts2">${link?`<a class="tbtn play" href="${esc(link)}" target="_blank" rel="noopener">▶ DİNLE</a>`:""}<button type="button" class="tbtn" data-${isLoop?"loop":"beat"}="${esc(b.id)}">DÜZENLE</button></span><span class="reel"></span></div></article>`}
 function renderKasa(){
   const list=S.beats.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.created||0)-(a.created||0));
-  $("tapes").innerHTML=list.length?list.map(b=>tapeHTML(b,"beat")).join(""):`<div class="empty">KASA BOŞ.<br>İLK BEAT'İNİ BİTİRİNCE BURAYA KOY.</div>`;
+  $("tapes").innerHTML=list.length?list.map(b=>tapeHTML(b,"beat")).join(""):`<div class="empty">KASA BOŞ</div>`;
 }
 function renderLoops(){
   const list=S.loops.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.created||0)-(a.created||0));
-  $("loopTapes").innerHTML=list.length?list.map(b=>tapeHTML(b,"loop")).join(""):`<div class="empty">LOOP KASASI BOŞ.<br>COOK-UP'TA ÇIKAN LOOP'LARI BURAYA KOY.</div>`;
+  $("loopTapes").innerHTML=list.length?list.map(b=>tapeHTML(b,"loop")).join(""):`<div class="empty">LOOP YOK</div>`;
 }
 /* ---------- notes (iPhone Notes logic) ---------- */
 function noteWhen(t){const d=new Date(t);const sameDay=iso(d)===TODAY;
@@ -569,12 +586,12 @@ function renderNotes(){
   if(editing){const n=noteCur();$("notePin").classList.toggle("on",!!(n&&n.pinned));$("notePin").setAttribute("aria-pressed",String(!!(n&&n.pinned)));return}
   const q=S.noteQ.trim().toLocaleLowerCase("tr");
   const list=S.notes.filter(n=>!q||String(n.text||"").toLocaleLowerCase("tr").includes(q)).sort((a,b)=>(b.updated||0)-(a.updated||0));
-  const row=n=>{const p=noteParts(n.text);return `<button type="button" class="nrow" data-note="${esc(n.id)}"><div class="nt1">${n.pinned?"📌 ":""}${esc(p.title)}</div><div class="nt2"><b>${noteWhen(n.updated||n.created)}</b>${esc(p.rest||"Ek metin yok")}</div></button>`};
+  const row=n=>{const p=noteParts(n.text);return `<button type="button" class="nrow" data-note="${esc(n.id)}"><div class="nt1">${n.pinned?"📌 ":""}${esc(p.title)}</div><div class="nt2"><b>${noteWhen(n.updated||n.created)}</b>${esc(p.rest||"")}</div></button>`};
   const pinned=list.filter(n=>n.pinned), rest=list.filter(n=>!n.pinned);
   let html="";
   if(pinned.length)html+=`<div class="lbl">SABİTLENENLER</div>`+pinned.map(row).join("");
   if(rest.length)html+=(pinned.length?`<div class="lbl">NOTLAR</div>`:"")+rest.map(row).join("");
-  $("noteList").innerHTML=html||`<div class="empty">${q?"SONUÇ YOK.":"HENÜZ NOT YOK.<br>＋ YENİ NOT İLE BAŞLA."}</div>`;
+  $("noteList").innerHTML=html||`<div class="empty">${q?"SONUÇ YOK":"NOT YOK"}</div>`;
 }
 const ST_LABEL={bekliyor:"BEKLİYOR",cevap:"CEVAP GELDİ",olumlu:"OLUMLU ♥",olumsuz:"OLUMSUZ"};
 function renderSends(){
@@ -584,7 +601,7 @@ function renderSends(){
     return `<article class="send${due?" due":""}"><div class="top"><div><div class="who">${esc(s.to)}</div>${s.what?`<div class="what">${esc(s.what)}</div>`:""}</div><span class="age">${age===0?"BUGÜN":age+" GÜN"}</span></div>
       <div class="row"><span class="tag" style="--cc:var(--c-ingilizce)">${esc((s.plat||"").toLocaleUpperCase("tr"))}</span><span class="tag ${due?"st-tekrar":"st-"+esc(s.status)}">${due?"TEKRAR YAZ":ST_LABEL[s.status]||""}</span>${s.follow?`<span class="tag xp">${s.follow}× TAKİP</span>`:""}</div>
       ${s.note?`<div class="what" style="font-weight:500">${esc(s.note)}</div>`:""}
-      <div class="row">${s.status==="bekliyor"?`<button type="button" class="tbtn play" data-follow="${esc(s.id)}">TEKRAR YAZDIM</button><button type="button" class="tbtn" data-reply="${esc(s.id)}">CEVAP GELDİ</button>`:""}<button type="button" class="tbtn" data-send="${esc(s.id)}">DÜZENLE</button></div></article>`}).join(""):`<div class="empty">HENÜZ GÖNDERİM YOK.<br>İLK LOOP'UNU YOLLA.</div>`;
+      <div class="row">${s.status==="bekliyor"?`<button type="button" class="tbtn play" data-follow="${esc(s.id)}">TEKRAR YAZDIM</button><button type="button" class="tbtn" data-reply="${esc(s.id)}">CEVAP GELDİ</button>`:""}<button type="button" class="tbtn" data-send="${esc(s.id)}">DÜZENLE</button></div></article>`}).join(""):`<div class="empty">GÖNDERİM YOK</div>`;
 }
 function renderSteps(){
   $("steps").innerHTML=DAYS.map((d,i)=>{const p=Math.round(Math.min(1,pct(i))*100);
@@ -605,14 +622,14 @@ function renderList(){
   document.body.classList.toggle("editing",S.edit);
   $("chLbl").textContent=(i===todayIdx?"BUGÜN · ":"")+DAYS[i].toLocaleUpperCase("tr")+" · KANALLAR";
   if(!S.loaded){$("list").innerHTML=`<div class="empty">PROGRAM YÜKLENİYOR...</div>`;return}
-  if(!its.length){$("list").innerHTML=`<div class="empty">BU GÜN BOŞ.<br>＋ KANAL EKLE</div>`;return}
+  if(!its.length){$("list").innerHTML=`<div class="empty">BU GÜN BOŞ</div>`;return}
   const check=`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#22163F" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   $("list").innerHTML=its.map(it=>{const c=CATS[it.c]||CATS.serbest, isDone=!!p.done[it.id];
     const isNow=i===todayIdx&&hm>=it.s&&hm<it.e;
     return `<button type="button" class="ch${isDone?" done":""}${isNow?" live":""}" data-id="${esc(it.id)}" style="--cc:var(--c-${esc(it.c)},var(--c-serbest))" aria-pressed="${isDone}">
       <span class="t">${esc(it.s)}<span>${esc(it.e)}</span></span>
       <span><span class="name">${esc(it.t)}</span>
-        <span class="tags"><span class="tag">${c.label}</span><span class="tag xp">+${c.xp} XP</span>${isNow?'<span class="tag now">● ŞİMDİ</span>':""}</span>
+        <span class="tags"><span class="tag">${c.label}</span><span class="tag xp">${hrs(mins(it))} SA</span>${isNow?'<span class="tag now">● ŞİMDİ</span>':""}</span>
         ${it.n?`<span class="note">${esc(it.n)}</span>`:""}</span>
       <span class="pad" aria-hidden="true">${check}</span><span class="edit">DÜZEN<br>LE ›</span></button>`}).join("");
 }
@@ -650,18 +667,16 @@ async function flush(path){running[path]=true;
 /* ---------- game ---------- */
 let msgT;function lcdMsg(m){S.msg=m;renderLCD();clearTimeout(msgT);msgT=setTimeout(()=>{S.msg="";renderLCD()},1800)}
 function applyXP(delta,date,p,anchor){
-  const st={...S.stats}, before=levelInfo(st.xp||0).L;
+  const st={...S.stats};
   st.xp=Math.max(0,(st.xp||0)+delta);
-  const after=levelInfo(st.xp).L, i=DATES.indexOf(date);
+  const i=DATES.indexOf(date);
   let dayDone=false;
   if(delta>0&&date<=TODAY&&pct(i,p)>=DAY_GOAL&&date>(st.lastFull||"")){
     st.streak=st.lastFull===prevDay(date)?(st.streak||0)+1:1;
     st.best=Math.max(st.best||0,st.streak);st.lastFull=date;dayDone=true;
   }
   S.stats=st;write("stats/me",st);
-  if(delta>0&&anchor)floatXP(anchor,"+"+delta+" XP");
-  if(after>before){notes(70);arp();bump();toast("LEVEL UP! "+pad2(after),"böyle devam, Ari")}
-  else if(dayDone){notes(55);arp();bump();toast("GÜN TAMAM ♥ "+pad2(st.streak),"seri büyüyor")}
+  if(dayDone){notes(55);arp();bump();toast("GÜN TAMAM ♥ "+pad2(st.streak))}
 }
 function toggleItem(id,el){
   const date=DATES[S.sel], p=JSON.parse(JSON.stringify(prog(date))), it=S.plan.items.find(x=>x.id===id);if(!it)return;
@@ -669,7 +684,7 @@ function toggleItem(id,el){
   if(was)delete p.done[id];else p.done[id]=true;
   S.week[date]=p;write("progress/"+date,p);
   const rect=el.querySelector(".pad").getBoundingClientRect();
-  if(!was){kick();blip(c.hz,.18,"square",.05,.02);burst(el.querySelector(".pad"));buzz();lcdMsg("+"+c.xp+" XP · "+c.label)}else unblip();
+  if(!was){kick();blip(c.hz,.18,"square",.05,.02);burst(el.querySelector(".pad"));buzz();lcdMsg("✓ "+c.label+" · "+hrs(mins(it))+" SA")}else unblip();
   render();
   applyXP(was?-c.xp:c.xp,date,p,was?null:rect);render();
   if(!was&&it.c==="muzik"&&/^bitirme/i.test(it.t))setTimeout(()=>openBeat(null,true),900);
@@ -684,9 +699,11 @@ function useJoker(){
   j.used=(j.used||0)+1;st.joker=j;
   if(date>(st.lastFull||"")){st.streak=st.lastFull===prevDay(date)?(st.streak||0)+1:1;st.best=Math.max(st.best||0,st.streak);st.lastFull=date}
   S.stats=st;write("stats/me",st);
-  arp();notes(40);toast("★ JOKER","seri korundu · kalan "+jokersLeft());render();
+  arp();notes(40);toast("★ JOKER","kalan "+jokersLeft());render();
 }
 function addXP(n,rect,msg){applyXP(n,TODAY,prog(TODAY),rect||null);if(msg)lcdMsg(msg)}
+const MILESTONES=[5,10,25,50,100,150,200,300,500];
+function milestone(n,label){if(!MILESTONES.includes(n))return false;arp();notes(80);bump();toast(n+". "+label+" ★");return true}
 function setWater(k,el){
   const date=DATES[S.sel], p=JSON.parse(JSON.stringify(prog(date))), old=p.water||0;
   const nw=k<=old?k-1:k;if(nw===old)return;
@@ -698,7 +715,7 @@ function setWater(k,el){
   if(nw>old){blip(520+nw*60,.12,"sine",.09);burst(el,["#7FC8FF","#E6F5FF","#fff"]);buzz();lcdMsg("SU "+(nw*0.5).toFixed(1)+"L")}else unblip();
   render();
   applyXP(delta,date,p,nw>old?rect:null);
-  if(nw===WATER_N&&old<WATER_N){toast("3 LİTRE ●","+"+WATER_BONUS+" XP BONUS");arp()}
+  if(nw===WATER_N&&old<WATER_N){toast("3 LİTRE ●");arp()}
   renderLCD();renderSteps();
 }
 
@@ -779,9 +796,9 @@ $("beatForm").addEventListener("submit",e=>{e.preventDefault();
   if(!data.name||!data.date)return;
   if(beatEditing){const old=vaultArr().find(x=>x.id===beatEditing)||{};const b={...old,...data};setVaultArr(vaultArr().map(x=>x.id===b.id?b:x));write(vaultCol()+b.id,b);toast("KAYDEDİLDİ")}
   else if(vaultKind==="loop"){const b={id:"l"+Date.now().toString(36),created:Date.now(),...data};S.loops=[...S.loops,b];write("loops/"+b.id,b);
-    kick();blip(523,.14);notes(24);addXP(XP_LOOP,null,"LOOP GİRDİ +"+XP_LOOP+" XP");toast("LOOP KASADA ↻","bu hafta "+loopsThisWeek())}
+    kick();blip(523,.14);notes(24);addXP(XP_LOOP,null,"LOOP KASADA");if(!milestone(S.loops.length,"LOOP"))toast("LOOP KASADA ↻")}
   else{const b={id:"b"+Date.now().toString(36),created:Date.now(),...data};S.beats=[...S.beats,b];write("beats/"+b.id,b);
-    kick();arp();notes(50);bump();addXP(XP_BEAT,null,"KASAYA GİRDİ +"+XP_BEAT+" XP");toast("KASAYA GİRDİ ♪","bu hafta "+beatsThisWeek()+"/"+BEAT_GOAL)}
+    kick();arp();notes(50);bump();addXP(XP_BEAT,null,"KASAYA GİRDİ");if(!milestone(S.beats.length,"BEAT"))toast("KASAYA GİRDİ ♪",beatsThisWeek()+"/"+BEAT_GOAL)}
   $("beatScrim").classList.remove("open");render();
 });
 $("bDel").addEventListener("click",()=>armDelete($("bDel"),()=>{const id=beatEditing;setVaultArr(vaultArr().filter(x=>x.id!==id));del(vaultCol()+id);$("beatScrim").classList.remove("open");unblip();toast("SİLİNDİ");render()}));
@@ -808,7 +825,7 @@ function openNote(n){
   S.noteId=n?n.id:"n"+Date.now().toString(36);noteDirty=false;
   const d=$("noteDel");d.dataset.armed="";d.textContent="🗑";d.classList.remove("armed");
   $("noteText").value=n?n.text||"":"";noteStatus(n?"KAYDEDİLDİ · "+noteWhen(n.updated||n.created):"YENİ NOT");
-  render();scrollTo({top:0});setTimeout(()=>{const t=$("noteText");t.focus();if(n){t.setSelectionRange(t.value.length,t.value.length)}},60);
+  render();$("appScroll").scrollTo({top:0});setTimeout(()=>{const t=$("noteText");t.focus();if(n){t.setSelectionRange(t.value.length,t.value.length)}},60);
 }
 function closeNote(){
   noteFlush();const text=$("noteText").value, cur=noteCur();
@@ -840,9 +857,9 @@ $("sendForm").addEventListener("submit",e=>{e.preventDefault();
   const data={to:$("sTo").value.trim(),plat:$("sPlat").value,date:$("sDate").value,what:$("sWhat").value.trim(),status:$("sStatus").value,note:$("sNote").value.trim()};
   if(!data.to||!data.date)return;
   if(sendEditing){const old=S.sends.find(x=>x.id===sendEditing)||{};const s={...old,...data};
-    if(old.status!=="olumlu"&&s.status==="olumlu"){arp();notes(60);toast("OLUMLU CEVAP ♥","işte placement yolu")}else toast("KAYDEDİLDİ");saveSend(s)}
+    if(old.status!=="olumlu"&&s.status==="olumlu"){arp();notes(70);bump();const k=S.sends.filter(x=>x.status==="olumlu").length+1;toast(k===1?"İLK OLUMLU CEVAP ♥":"OLUMLU CEVAP ♥")}else toast("KAYDEDİLDİ");saveSend(s)}
   else{const s={id:"s"+Date.now().toString(36),created:Date.now(),last:data.date,follow:0,...data};saveSend(s);
-    kick();blip(392,.15);addXP(XP_SEND,null,"GÖNDERİLDİ +"+XP_SEND+" XP");toast("GÖNDERİLDİ ✉","bu hafta "+sendsThisWeek()+"/"+SEND_GOAL)}
+    kick();blip(392,.15);addXP(XP_SEND,null,"GÖNDERİLDİ");if(!milestone(S.sends.length,"GÖNDERİM"))toast("GÖNDERİLDİ ✉",sendsThisWeek()+"/"+SEND_GOAL)}
   $("sendScrim").classList.remove("open");render();
 });
 $("sDel").addEventListener("click",()=>armDelete($("sDel"),()=>{const id=sendEditing;S.sends=S.sends.filter(x=>x.id!==id);del("sends/"+id);$("sendScrim").classList.remove("open");unblip();toast("SİLİNDİ");render()}));
@@ -852,12 +869,12 @@ $("addSend").addEventListener("click",()=>openSend(null));
 $("sends").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
   const id=b.dataset.follow||b.dataset.reply||b.dataset.send, s=S.sends.find(x=>x.id===id);if(!s)return;
   if(b.dataset.send){openSend(s);return}
-  if(b.dataset.reply){const n={...s,status:"cevap"};saveSend(n);blip(523,.12);toast("CEVAP GELDİ","durumu düzenle'den güncelleyebilirsin");render();return}
-  if(b.dataset.follow){const rect=b.getBoundingClientRect();const n={...s,last:TODAY,follow:(s.follow||0)+1};saveSend(n);kick();addXP(XP_FOLLOW,rect,"TAKİP +"+XP_FOLLOW+" XP");render()}
+  if(b.dataset.reply){const n={...s,status:"cevap"};saveSend(n);blip(523,.12);toast("CEVAP GELDİ");render();return}
+  if(b.dataset.follow){const rect=b.getBoundingClientRect();const n={...s,last:TODAY,follow:(s.follow||0)+1};saveSend(n);kick();addXP(XP_FOLLOW,null,"TAKİP EDİLDİ");render()}
 });
 
 /* ---------- events ---------- */
-document.querySelector(".dock").addEventListener("click",e=>{const t=e.target.closest(".tab");if(!t)return;if(S.scr==="note"&&t.dataset.scr!=="note"&&S.noteId)closeNote();S.scr=t.dataset.scr;S.msg="";blip({today:330,kasa:392,loop:415,note:466,send:440}[t.dataset.scr]||330,.07,"square",.04);render();scrollTo({top:0,behavior:reduce?"auto":"smooth"})});
+document.querySelector(".dock").addEventListener("click",e=>{const t=e.target.closest(".tab");if(!t)return;if(S.scr==="note"&&t.dataset.scr!=="note"&&S.noteId)closeNote();S.scr=t.dataset.scr;S.msg="";blip({today:330,kasa:392,loop:415,note:466,send:440}[t.dataset.scr]||330,.07,"square",.04);render();$("appScroll").scrollTo({top:0,behavior:reduce?"auto":"smooth"})});
 $("jokerBtn").addEventListener("click",useJoker);
 $("steps").addEventListener("click",e=>{const b=e.target.closest(".key");if(!b)return;S.sel=Number(b.dataset.i);blip(330+S.sel*30,.07,"square",.04);render();scrollNow()});
 $("water").addEventListener("click",e=>{const b=e.target.closest(".wpad");if(!b||!S.loaded)return;setWater(Number(b.dataset.k),b)});
@@ -887,6 +904,10 @@ window.SYLWA_START=function(adapter){
   db.collection("progress").where("week","==",WEEK).onSnapshot(q=>{
     const w={};q.docs.forEach(d=>{const v=d.data();if(v&&v.date)w[v.date]={...v,done:{...(v.done||{})}}});
     S.week=w;if(S.loaded)render();
+  },()=>{});
+  db.collection("progress").where("week","==",(()=>{let d=WEEK;for(let j=0;j<7;j++)d=prevDay(d);return d})()).onSnapshot(q=>{
+    const w={};q.docs.forEach(d=>{const v=d.data();if(v&&v.date)w[v.date]={...v,done:{...(v.done||{})}}});
+    S.prevWeek=w;if(S.loaded&&S.scr==="today")renderLCD();
   },()=>{});
   db.collection("beats").onSnapshot(q=>{S.beats=q.docs.map(d=>({...d.data(),id:d.id}));render()},e=>banner("Kasa okunamadı ("+e.code+")."));
   db.collection("sends").onSnapshot(q=>{S.sends=q.docs.map(d=>({...d.data(),id:d.id}));render()},e=>banner("Gönderimler okunamadı ("+e.code+")."));
@@ -1015,7 +1036,7 @@ function setupNotify(uid){
     let p;try{p=await Notification.requestPermission()}catch(e){p=perm()}
     if(p!=="granted"){paint();return}
     $("nEnable").disabled=true;$("nEnable").textContent="AÇILIYOR...";
-    try{await saveToken();window.toast&&window.toast("BİLDİRİM AÇIK 🔔","saatinde haber veririm");window.arp&&window.arp()}
+    try{await saveToken();window.toast&&window.toast("BİLDİRİM AÇIK 🔔");window.arp&&window.arp()}
     catch(e){$("nHint").textContent="Açılamadı: "+(e&&(e.code||e.message)||"bilinmeyen hata")+". İnternete bağlı olduğundan emin olup tekrar dene.";$("nEnable").disabled=false;return}
     paint();
   });
@@ -1033,7 +1054,7 @@ function setupNotify(uid){
   $("nTest").addEventListener("click",()=>{
     withTimeout(setDoc(doc(fs,base+"notify/state"),{testRequest:Date.now()},{merge:true}),1500).catch(()=>{});
     window.blip&&window.blip(523,.1);
-    window.toast&&window.toast("TEST İSTENDİ",isOn()?"15 dakika içinde gelir":"önce bildirimleri aç");
+    window.toast&&window.toast("TEST İSTENDİ",isOn()?"":"önce bildirimleri aç");
   });
 }
 

@@ -6,7 +6,7 @@
    - Push notifications: see the section at the bottom.
    Bump VERSION whenever this file or the shell list changes. */
 
-const VERSION = "sylwa-v3";
+const VERSION = "sylwa-v4";
 const SHELL = [
   "./",
   "./index.html",
