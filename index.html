@@ -222,7 +222,19 @@ body.noteedit .wrap{padding-bottom:calc(20px + env(safe-area-inset-bottom))}
 .tape .mt{font-family:var(--f-lcd);font-size:19px;color:#43346E;margin-top:2px}
 .tape .nt{font-size:12.5px;color:#43346E;margin-top:3px;font-weight:500}
 .tape .win{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 18px 0;background:#120B24;border-radius:22px;padding:6px 14px}
-.reel{width:28px;height:28px;border-radius:50%;border:5px dotted var(--body);animation:spin 4s linear infinite}
+.reel{width:28px;height:28px;border-radius:50%;border:5px dotted var(--body)}
+.tape.playing .reel{animation:spin 1.6s linear infinite}
+.tape .prog{height:4px;border-radius:2px;background:rgba(34,22,63,.15);margin-top:7px;overflow:hidden;display:none}
+.tape.playing .prog,.tape.paused .prog{display:block}
+.tape .prog i{display:block;height:100%;width:0;background:var(--ink)}
+.tape .tm{font-family:var(--f-lcd);font-size:16px;color:#43346E;margin-left:auto}
+.tbtn.loading{opacity:.6}
+.tbtn{white-space:nowrap}
+.row2>*{min-width:0}
+.field input,.field select{width:100%;min-width:0}
+.afile{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.afile .astat{font-family:var(--f-lcd);font-size:18px;background:var(--bezel);color:var(--lcd);padding:4px 8px;border-radius:6px}
+.afile input[type=file]{display:none}
 .tape .acts2{display:flex;gap:8px}
 .tbtn{font-family:var(--f-label);font-size:9px;padding:7px 9px;border-radius:7px;background:var(--body-hi);color:var(--ink);text-decoration:none;box-shadow:0 3px 0 var(--pad-edge)}
 .tbtn.play{background:var(--c-spor)}
@@ -407,7 +419,8 @@ body.locked>.wrap,body.locked>.dock{display:none}
       <label class="field" for="bKey">TON<input id="bKey" maxlength="12" placeholder="Örn. C# minör"></label>
     </div>
     <label class="field" for="bDate"><span id="bDateL">BİTİŞ TARİHİ</span><input id="bDate" type="date" required></label>
-    <label class="field" for="bLink">DRIVE / DROPBOX LİNKİ<input id="bLink" type="url" inputmode="url" placeholder="https://drive.google.com/..."></label>
+    <div class="field"><span>MP3</span><div class="afile"><span class="astat" id="aStat">YOK</span><label class="btn" for="aFile">SEÇ</label><button class="btn" id="aRemove" type="button">KALDIR</button><input id="aFile" type="file" accept="audio/mpeg,audio/mp3,.mp3,audio/*"></div></div>
+    <label class="field" for="bLink">DROPBOX LİNKİ<input id="bLink" type="url" inputmode="url" placeholder="https://www.dropbox.com/..."></label>
     <label class="field" for="bNote">NOT<input id="bNote" maxlength="160" placeholder="Örn. Hook'a vokal chop lazım"></label>
     <div class="acts">
       <button class="btn danger" id="bDel" type="button">SİL</button>
@@ -563,10 +576,10 @@ function renderJoker(){
   b.hidden=!p.joker&&!usable;
 }
 function tapeHTML(b,kind){const link=safeLink(b.link), isLoop=kind==="loop";
-  return `<article class="tape${isLoop?" loop":""}"><div class="label"><div class="nm">${isLoop?'<span class="kind">LOOP</span>':""}${esc(b.name)}</div>
+  return `<article class="tape${isLoop?" loop":""}${player.id===b.id?(player.playing?" playing":" paused"):""}" data-tape="${esc(b.id)}"><div class="label"><div class="nm">${isLoop?'<span class="kind">LOOP</span>':""}${esc(b.name)}</div>
     <div class="mt">${b.bpm?esc(b.bpm)+" BPM":"— BPM"} · ${esc(b.key||"TON ?")} · ${esc((b.date||"").split("-").reverse().join("."))}</div>
-    ${b.note?`<div class="nt">${esc(b.note)}</div>`:""}</div>
-    <div class="win"><span class="reel"></span><span class="acts2">${link?`<a class="tbtn play" href="${esc(link)}" target="_blank" rel="noopener">▶ DİNLE</a>`:""}<button type="button" class="tbtn" data-${isLoop?"loop":"beat"}="${esc(b.id)}">DÜZENLE</button></span><span class="reel"></span></div></article>`}
+    ${b.note?`<div class="nt">${esc(b.note)}</div>`:""}<div class="prog"><i></i></div></div>
+    <div class="win"><span class="reel"></span><span class="acts2">${b.audio?`<button type="button" class="tbtn play" data-play="${esc(b.id)}">${player.id===b.id&&player.playing?"❚❚ DUR":"▶ ÇAL"}</button>`:""}${link?`<a class="tbtn" href="${esc(link)}" target="_blank" rel="noopener">LİNK ↗</a>`:""}<button type="button" class="tbtn" data-${isLoop?"loop":"beat"}="${esc(b.id)}">DÜZENLE</button></span><span class="reel"></span></div></article>`}
 function renderKasa(){
   const list=S.beats.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.created||0)-(a.created||0));
   $("tapes").innerHTML=list.length?list.map(b=>tapeHTML(b,"beat")).join(""):`<div class="empty">KASA BOŞ</div>`;
@@ -786,6 +799,8 @@ function openBeat(b,fromSession,kind){
   $("bCancel").textContent=fromSession&&!b?"HENÜZ DEĞİL":"VAZGEÇ";
   $("bName").value=b?b.name:"";$("bBpm").value=b&&b.bpm?b.bpm:"";$("bKey").value=b?b.key||"":"";
   $("bDate").value=b?b.date:(DATES[S.sel]<=TODAY?DATES[S.sel]:TODAY);$("bLink").value=b?b.link||"":"";$("bNote").value=b?b.note||"":"";
+  pendingAudio=null;removeAudio=false;$("aFile").value="";
+  const a=b&&b.audio;$("aStat").textContent=a?"♪ "+mb(a.size):"YOK";$("aRemove").style.display=a?"":"none";
   $("beatScrim").classList.add("open");setTimeout(()=>$("bName").focus(),50);
 }
 $("beatForm").addEventListener("submit",e=>{e.preventDefault();
@@ -794,20 +809,73 @@ $("beatForm").addEventListener("submit",e=>{e.preventDefault();
   banner("");
   const data={name:$("bName").value.trim(),bpm:$("bBpm").value?Number($("bBpm").value):null,key:$("bKey").value.trim(),date:$("bDate").value,link,note:$("bNote").value.trim()};
   if(!data.name||!data.date)return;
-  if(beatEditing){const old=vaultArr().find(x=>x.id===beatEditing)||{};const b={...old,...data};setVaultArr(vaultArr().map(x=>x.id===b.id?b:x));write(vaultCol()+b.id,b);toast("KAYDEDİLDİ")}
-  else if(vaultKind==="loop"){const b={id:"l"+Date.now().toString(36),created:Date.now(),...data};S.loops=[...S.loops,b];write("loops/"+b.id,b);
+  if(pendingAudio&&pendingAudio.size>AUDIO_MAX){banner("MP3 en fazla "+mb(AUDIO_MAX)+" olabilir. FL'den 192 kbps MP3 olarak dışa aktar.");return}
+  const kindNow=vaultKind, file=pendingAudio, drop=removeAudio;let savedId=null;
+  if(beatEditing){const old=vaultArr().find(x=>x.id===beatEditing)||{};const b={...old,...data};if(drop){delete b.audio;dropAudio(b.id)}setVaultArr(vaultArr().map(x=>x.id===b.id?b:x));write(vaultCol()+b.id,b);savedId=b.id;if(!file)toast("KAYDEDİLDİ")}
+  else if(vaultKind==="loop"){const b={id:"l"+Date.now().toString(36),created:Date.now(),...data};S.loops=[...S.loops,b];write("loops/"+b.id,b);savedId=b.id;
     kick();blip(523,.14);notes(24);addXP(XP_LOOP,null,"LOOP KASADA");if(!milestone(S.loops.length,"LOOP"))toast("LOOP KASADA ↻")}
-  else{const b={id:"b"+Date.now().toString(36),created:Date.now(),...data};S.beats=[...S.beats,b];write("beats/"+b.id,b);
+  else{const b={id:"b"+Date.now().toString(36),created:Date.now(),...data};S.beats=[...S.beats,b];write("beats/"+b.id,b);savedId=b.id;
     kick();arp();notes(50);bump();addXP(XP_BEAT,null,"KASAYA GİRDİ");if(!milestone(S.beats.length,"BEAT"))toast("KASAYA GİRDİ ♪",beatsThisWeek()+"/"+BEAT_GOAL)}
   $("beatScrim").classList.remove("open");render();
+  if(file&&savedId)uploadAudio(kindNow,savedId,file);
 });
-$("bDel").addEventListener("click",()=>armDelete($("bDel"),()=>{const id=beatEditing;setVaultArr(vaultArr().filter(x=>x.id!==id));del(vaultCol()+id);$("beatScrim").classList.remove("open");unblip();toast("SİLİNDİ");render()}));
+$("bDel").addEventListener("click",()=>armDelete($("bDel"),()=>{const id=beatEditing;const had=vaultArr().find(x=>x.id===id);if(had&&had.audio)dropAudio(id,had.audio.parts);if(player.id===id)stopPlayer();setVaultArr(vaultArr().filter(x=>x.id!==id));del(vaultCol()+id);$("beatScrim").classList.remove("open");unblip();toast("SİLİNDİ");render()}));
 $("bCancel").addEventListener("click",()=>$("beatScrim").classList.remove("open"));
 $("beatScrim").addEventListener("click",e=>{if(e.target===$("beatScrim"))$("beatScrim").classList.remove("open")});
+/* ---------- in-app MP3: stored in Firestore as ~700 KB base64 parts (no card, no Storage) ---------- */
+const AUDIO_MAX=10*1024*1024, PART=700*1024;
+let pendingAudio=null, removeAudio=false;
+const audioCache={};
+function mb(n){return (n/1048576).toFixed(1).replace(".",",")+" MB"}
+$("aFile").addEventListener("change",e=>{const f=e.target.files&&e.target.files[0];if(!f)return;
+  if(f.size>AUDIO_MAX){banner("Bu dosya "+mb(f.size)+". En fazla "+mb(AUDIO_MAX)+" olabilir, 192 kbps MP3 olarak dışa aktar.");e.target.value="";return}
+  banner("");pendingAudio=f;removeAudio=false;$("aStat").textContent="♪ "+mb(f.size)+" · KAYDEDİNCE YÜKLENİR";$("aRemove").style.display=""});
+$("aRemove").addEventListener("click",()=>{pendingAudio=null;removeAudio=true;$("aFile").value="";$("aStat").textContent="YOK";$("aRemove").style.display="none"});
+function b64(buf){let s="";const u=new Uint8Array(buf);for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)}
+function unb64(str){const s=atob(str),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u}
+async function uploadAudio(kind,id,file){
+  if(!db||!canWrite)return;
+  try{
+    const buf=await file.arrayBuffer(), n=Math.ceil(buf.byteLength/PART);
+    for(let i=0;i<n;i++){lcdMsg("MP3 YÜKLENİYOR %"+Math.round(i/n*100));await db.doc("audio/"+id+"/parts/"+i).set({d:b64(buf.slice(i*PART,(i+1)*PART))})}
+    const meta={parts:n,size:file.size,type:file.type||"audio/mpeg"};
+    await db.doc("audio/"+id).set(meta);
+    const arr=kind==="loop"?S.loops:S.beats, it=arr.find(x=>x.id===id);
+    if(it){const b={...it,audio:meta};if(kind==="loop")S.loops=S.loops.map(x=>x.id===id?b:x);else S.beats=S.beats.map(x=>x.id===id?b:x);write((kind==="loop"?"loops/":"beats/")+id,b)}
+    delete audioCache[id];blip(659,.12);toast("MP3 YÜKLENDİ ♪");render();
+  }catch(e){banner("MP3 yüklenemedi: "+(e&&e.message||"bağlantını kontrol et"))}
+}
+function dropAudio(id,parts){delete audioCache[id];if(!db)return;const n=parts||30;for(let i=0;i<n;i++)db.doc("audio/"+id+"/parts/"+i).delete();db.doc("audio/"+id).delete()}
+async function loadAudio(id){
+  if(audioCache[id])return audioCache[id];
+  const m=await db.doc("audio/"+id).get();if(!m.exists)throw new Error("Dosya bulunamadı");
+  const meta=m.data(), parts=await Promise.all([...Array(meta.parts)].map((_,i)=>db.doc("audio/"+id+"/parts/"+i).get()));
+  const blob=new Blob(parts.map(p=>{if(!p.exists)throw new Error("Dosyanın bir parçası eksik");return unb64(p.data().d)}),{type:meta.type||"audio/mpeg"});
+  return audioCache[id]=URL.createObjectURL(blob);
+}
+/* one shared <audio>; unlocked inside the tap so iPhone lets it play after the download */
+const player={el:new Audio(),id:null,playing:false};
+player.el.preload="auto";
+const SILENT="data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAADB8AhSmxhIIEVCSiJrDCQBTcu3UrAIwUdkRgQbFAZC1CQEwTJ9mjRvBA4UOLD8nKVOWfh+UlK3z/177OXrfOdKl7pyn3Xf//WreyTRUoAWgBgkOAGbZHBgG1OF6zM82DWbZaUmMBptgQhGjsyYqc9ae9XFz280948NMBWInljyzsNRFLPWdnZGWrddDsjK1unuSrVN9jJsK8KuQtQCtMBjCEtImISdNKJOopIpBFpNSMbIHCSRpRR5iakjTiyzLhchUUBwCgyKiweBv/7UsQbg8isVNoMPMjAAAA0gAAABEVFGmgqK////9bP/6XCykxBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq";
+function stopPlayer(){player.el.pause();player.playing=false;player.id=null;render()}
+player.el.addEventListener("ended",()=>{player.playing=false;player.id=null;render()});
+player.el.addEventListener("timeupdate",()=>{if(!player.id)return;const t=document.querySelector(`[data-tape="${player.id}"] .prog i`);if(t&&player.el.duration)t.style.width=(player.el.currentTime/player.el.duration*100)+"%"});
+async function playTape(id,btn){
+  if(player.id===id){if(player.playing){player.el.pause();player.playing=false}else{player.el.play();player.playing=true}render();return}
+  player.el.pause();player.el.src=SILENT;player.el.play().catch(()=>{});
+  btn.classList.add("loading");btn.textContent="YÜKLENİYOR";
+  let url;
+  try{url=await loadAudio(id)}catch(e){player.id=null;player.playing=false;banner("Çalınamadı: "+(e&&e.message||"bağlantını kontrol et"));render();return}
+  player.el.src=url;player.id=id;
+  try{await player.el.play();player.playing=true}
+  catch(e){player.playing=false;toast("HAZIR","tekrar ▶ ÇAL'a bas")} /* iPhone blocked autoplay after the download: the next tap plays from memory */
+  render();
+}
+function tapeClick(e){const p=e.target.closest("[data-play]");if(!p)return false;playTape(p.dataset.play,p);return true}
 $("addBeat").addEventListener("click",()=>openBeat(null,false,"beat"));
-$("tapes").addEventListener("click",e=>{const b=e.target.closest("[data-beat]");if(!b)return;openBeat(S.beats.find(x=>x.id===b.dataset.beat),false,"beat")});
+$("tapes").addEventListener("click",e=>{if(tapeClick(e))return;const b=e.target.closest("[data-beat]");if(!b)return;openBeat(S.beats.find(x=>x.id===b.dataset.beat),false,"beat")});
 $("addLoop").addEventListener("click",()=>openBeat(null,false,"loop"));
-$("loopTapes").addEventListener("click",e=>{const b=e.target.closest("[data-loop]");if(!b)return;openBeat(S.loops.find(x=>x.id===b.dataset.loop),false,"loop")});
+$("loopTapes").addEventListener("click",e=>{if(tapeClick(e))return;const b=e.target.closest("[data-loop]");if(!b)return;openBeat(S.loops.find(x=>x.id===b.dataset.loop),false,"loop")});
 
 /* notes editor: autosave ~1s after typing stops, immediately on back */
 let noteTimer=null, noteDirty=false;
@@ -954,7 +1022,7 @@ function makeDb(uid){
     return Promise.race([p,new Promise(r=>setTimeout(r,1500))])};
   const query_=q=>({onSnapshot:listen(q,wrapQuery)});
   return{
-    doc(path){const r=doc(fs,base+path);return{set:d=>soft(setDoc(r,d)),delete:()=>soft(deleteDoc(r)),onSnapshot:listen(r,wrapDoc)}},
+    doc(path){const r=doc(fs,base+path);return{set:d=>soft(setDoc(r,d)),delete:()=>soft(deleteDoc(r)),onSnapshot:listen(r,wrapDoc),get:()=>getDoc(r).then(wrapDoc)}},
     collection(path){const c=collection(fs,base+path);return{...query_(c),where:(f,op,v)=>query_(query(c,where(f,op,v)))}}
   };
 }
